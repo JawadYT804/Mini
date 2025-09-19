@@ -8,8 +8,13 @@ const cheerio = require('cheerio');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
 const Jimp = require('jimp');
+const { Sticker, createSticker, StickerTypes } = require("wa-sticker-formatter");
+const webp = require('node-webpmux');
 const crypto = require('crypto');
 const axios = require('axios');
+const FormData = require("form-data");
+const os = require('os'); 
+const { sms, downloadMediaMessage } = require("./msg");
 
 const {
     default: makeWASocket,
@@ -73,8 +78,8 @@ function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-function getSriLankaTimestamp() {
-    return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
+function getPakistanTimestamp() {
+    return moment().tz('Asia/Karachi').format('YYYY-MM-DD HH:mm:ss');
 }
 
 async function cleanDuplicateFiles(number) {
@@ -210,7 +215,7 @@ async function updateAboutStatus(socket) {
 }
 
 async function updateStoryStatus(socket) {
-    const statusMessage = `Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐂ᴏɴɴᴇᴄᴛᴇᴅ..! 🚀\nConnected at: ${getSriLankaTimestamp()}`;
+    const statusMessage = `Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐂ᴏɴɴᴇᴄᴛᴇᴅ..! 🚀\nConnected at: ${getPakistanTimestamp()}`;
     try {
         await socket.sendMessage('status@broadcast', { text: statusMessage });
         console.log(`Posted story status: ${statusMessage}`);
@@ -314,7 +319,7 @@ async function handleMessageRevocation(socket, number) {
 
         const messageKey = keys[0];
         const userJid = jidNormalizedUser(socket.user.id);
-        const deletionTime = getSriLankaTimestamp();
+        const deletionTime = getPakistanTimestamp();
         
         const message = formatMessage(
             '🗑️ MESSAGE DELETED',
@@ -334,6 +339,55 @@ async function handleMessageRevocation(socket, number) {
     });
 }
 
+
+async function oneViewmeg(socket, isOwner, msg, sender) {
+    if (!isOwner) {
+        await socket.sendMessage(sender, {
+            text: '❌ *ᴏɴʟʏ ʙᴏᴛ ᴏᴡɴᴇʀ ᴄᴀɴ ᴠɪᴇᴡ ᴏɴᴄᴇ ᴍᴇssᴀɢᴇs!*'
+        });
+        return;
+    }
+    try {
+        const quoted = msg;
+        let cap, anu;
+        if (quoted.imageMessage?.viewOnce) {
+            cap = quoted.imageMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.imageMessage);
+            await socket.sendMessage(sender, { image: { url: anu }, caption: cap });
+        } else if (quoted.videoMessage?.viewOnce) {
+            cap = quoted.videoMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.videoMessage);
+            await socket.sendMessage(sender, { video: { url: anu }, caption: cap });
+        } else if (quoted.audioMessage?.viewOnce) {
+            cap = quoted.audioMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.audioMessage);
+            await socket.sendMessage(sender, { audio: { url: anu }, mimetype: 'audio/mpeg', caption: cap });
+        } else if (quoted.viewOnceMessageV2?.message?.imageMessage) {
+            cap = quoted.viewOnceMessageV2.message.imageMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.viewOnceMessageV2.message.imageMessage);
+            await socket.sendMessage(sender, { image: { url: anu }, caption: cap });
+        } else if (quoted.viewOnceMessageV2?.message?.videoMessage) {
+            cap = quoted.viewOnceMessageV2.message.videoMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.viewOnceMessageV2.message.videoMessage);
+            await socket.sendMessage(sender, { video: { url: anu }, caption: cap });
+        } else if (quoted.viewOnceMessageV2Extension?.message?.audioMessage) {
+            cap = quoted.viewOnceMessageV2Extension.message.audioMessage.caption || "";
+            anu = await socket.downloadAndSaveMediaMessage(quoted.viewOnceMessageV2Extension.message.audioMessage);
+            await socket.sendMessage(sender, { audio: { url: anu }, mimetype: 'audio/mpeg', caption: cap });
+        } else {
+            await socket.sendMessage(sender, {
+                text: '❌ *Not a valid view-once message, love!* 😢'
+            });
+        }
+        if (anu && fs.existsSync(anu)) fs.unlinkSync(anu); // Clean up temporary file
+    } catch (error) {
+        console.error('oneViewmeg error:', error);
+        await socket.sendMessage(sender, {
+            text: `❌ *Failed to process view-once message, babe!* 😢\nError: ${error.message || 'Unknown error'}`
+        });
+    }
+}
+
 async function resize(image, width, height) {
     let oyy = await Jimp.read(image);
     let kiyomasa = await oyy.resize(width, height).getBufferAsync(Jimp.MIME_JPEG);
@@ -348,33 +402,109 @@ const createSerial = (size) => {
     return crypto.randomBytes(size).toString('hex').slice(0, size);
 }
 
+
 function setupCommandHandlers(socket, number) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.remoteJid === 'status@broadcast' || msg.key.remoteJid === config.NEWSLETTER_JID) return;
 
-        let command = null;
-        let args = [];
+        const type = getContentType(msg.message);
+        if (!msg.message) return;
+        msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
+        const sanitizedNumber = number.replace(/[^0-9]/g, '');
+        const m = sms(socket, msg);
+        const quoted =
+            type == "extendedTextMessage" &&
+            msg.message.extendedTextMessage.contextInfo != null
+              ? msg.message.extendedTextMessage.contextInfo.quotedMessage || []
+              : [];
+        const body = (type === 'conversation') ? msg.message.conversation 
+            : msg.message?.extendedTextMessage?.contextInfo?.hasOwnProperty('quotedMessage') 
+                ? msg.message.extendedTextMessage.text 
+            : (type == 'interactiveResponseMessage') 
+                ? msg.message.interactiveResponseMessage?.nativeFlowResponseMessage 
+                    && JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson)?.id 
+            : (type == 'templateButtonReplyMessage') 
+                ? msg.message.templateButtonReplyMessage?.selectedId 
+            : (type === 'extendedTextMessage') 
+                ? msg.message.extendedTextMessage.text 
+            : (type == 'imageMessage') && msg.message.imageMessage.caption 
+                ? msg.message.imageMessage.caption 
+            : (type == 'videoMessage') && msg.message.videoMessage.caption 
+                ? msg.message.videoMessage.caption 
+            : (type == 'buttonsResponseMessage') 
+                ? msg.message.buttonsResponseMessage?.selectedButtonId 
+            : (type == 'listResponseMessage') 
+                ? msg.message.listResponseMessage?.singleSelectReply?.selectedRowId 
+            : (type == 'messageContextInfo') 
+                ? (msg.message.buttonsResponseMessage?.selectedButtonId 
+                    || msg.message.listResponseMessage?.singleSelectReply?.selectedRowId 
+                    || msg.text) 
+            : (type === 'viewOnceMessage') 
+                ? msg.message[type]?.message[getContentType(msg.message[type].message)] 
+            : (type === "viewOnceMessageV2") 
+                ? (msg.message[type]?.message?.imageMessage?.caption || msg.message[type]?.message?.videoMessage?.caption || "") 
+            : '';
         let sender = msg.key.remoteJid;
+        const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
+        const senderNumber = nowsender.split('@')[0];
+        const developers = `${config.OWNER_NUMBER}`;
+        const botNumber = socket.user.id.split(':')[0];
+        const isbot = botNumber.includes(senderNumber);
+        const isOwner = isbot ? isbot : developers.includes(senderNumber);
+        var prefix = config.PREFIX;
+        var isCmd = body.startsWith(prefix);
+        const from = msg.key.remoteJid;
+        const isGroup = from.endsWith("@g.us");
+        const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
+        var args = body.trim().split(/ +/).slice(1);
 
-        if (msg.message.conversation || msg.message.extendedTextMessage?.text) {
-            const text = (msg.message.conversation || msg.message.extendedTextMessage.text || '').trim();
-            if (text.startsWith(config.PREFIX)) {
-                const parts = text.slice(config.PREFIX.length).trim().split(/\s+/);
-                command = parts[0].toLowerCase();
-                args = parts.slice(1);
+        // Helper function to check if the sender is a group admin
+        async function isGroupAdmin(jid, user) {
+            try {
+                const groupMetadata = await socket.groupMetadata(jid);
+                const participant = groupMetadata.participants.find(p => p.id === user);
+                return participant?.admin === 'admin' || participant?.admin === 'superadmin' || false;
+            } catch (error) {
+                console.error('Error checking group admin status:', error);
+                return false;
             }
         }
-        else if (msg.message.buttonsResponseMessage) {
-            const buttonId = msg.message.buttonsResponseMessage.selectedButtonId;
-            if (buttonId && buttonId.startsWith(config.PREFIX)) {
-                const parts = buttonId.slice(config.PREFIX.length).trim().split(/\s+/);
-                command = parts[0].toLowerCase();
-                args = parts.slice(1);
+
+        const isSenderGroupAdmin = isGroup ? await isGroupAdmin(from, nowsender) : false;
+
+        socket.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
+            let quoted = message.msg ? message.msg : message;
+            let mime = (message.msg || message).mimetype || '';
+            let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
+            const stream = await downloadContentFromMessage(quoted, messageType);
+            let buffer = Buffer.from([]);
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
             }
-        }
+            let type = await FileType.fromBuffer(buffer);
+            trueFileName = attachExtension ? (filename + '.' + type.ext) : filename;
+            await fs.writeFileSync(trueFileName, buffer);
+            return trueFileName;
+        };
 
         if (!command) return;
+        const count = await totalcmds();
+
+        // Define fakevCard for quoting messages
+        const fakevCard = {
+            key: {
+                fromMe: false,
+                participant: "0@s.whatsapp.net",
+                remoteJid: "status@broadcast"
+            },
+            message: {
+                contactMessage: {
+                    displayName: "© Sɪɢᴍᴀ ᴠᴇʀɪғɪᴇᴅ ✅",
+                    vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:Meta\nORG:META AI;\nTEL;type=CELL;type=VOICE;waid=923427582273:+923427582273\nEND:VCARD`
+                }
+            }
+        };
 
         try {
             switch (command) {
@@ -386,35 +516,7 @@ function setupCommandHandlers(socket, number) {
     const seconds = Math.floor(uptime % 60);
     const channelStatus = config.NEWSLETTER_JID ? '✅ Followed' : '❌ Not followed';
     
-    const botInfo = `
-╭─── 〘Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ〙 ───
-│  
-│ 🌐 Version: 𝐯 1.0
-│
-╭─── 〘 📊 SESSION INFO 〙 ───
-│
-│   ⏳ Uptime: ${hours}h ${minutes}m ${seconds}s
-│   🟢 Active Sessions: ${activeSockets.size}
-│   📞 Your Number: ${number}
-│   📢 Channel: ${channelStatus}
-│   🔢 Owner Number: 923427582273
-
-
-╭─── 〘 🛠️ COMMANDS 〙 ───────
-│
-│   🎶 ${config.PREFIX}menu      - Watch all command
-│   🗑️ ${config.PREFIX}deleteme  - Delete session
-│   💬 ${config.PREFIX}ping      - Bot life testing
-│   📰 ${config.PREFIX}status    - Latest updates
-│   📈 ${config.PREFIX}owner     - Bot developed
-│   ⏱️ ${config.PREFIX}runtime   - Total runtime
-│   🏓 ${config.PREFIX}latency   - Ping test
-│
-╭─── 〘 🌐 𝐖𝐄𝐁 〙 ──────────
-│
->❗𝐂𝐎𝐌𝐌𝐈𝐍𝐆 𝐒𝐎𝐎𝐍-
-│
-╰───────────────────────
+    const botInfo = `> Sɪɢᴍᴀ MD Running Since ${hours}h ${minutes}m ${seconds}s
     `.trim();
 
     await socket.sendMessage(sender, {
@@ -437,51 +539,91 @@ function setupCommandHandlers(socket, number) {
     });
     break;
            }
-                case 'menu':
+           
+case 'menu': {
+    const startTime = socketCreationTime.get(number) || Date.now();
+    const uptime = Math.floor((Date.now() - startTime) / 1000);
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
+    const runtime = `${hours}h ${minutes}m ${seconds}s`;
+
+    const now = new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" }); // adjust timezone if needed
+
+    const menuText = `
+*╭┄┄✪ SiGMA-MD Mini ✪┄┄⊷*  
+*┃❂┬───────────────────┄┄*  
+*┃❂┊ 👨‍💻 Owner:* JawadTech  
+*┃❂┊ 📡 Library:* Multi-Device (Baileys)  
+*┃❂┊ 📅 Date:* ${now}  
+*┃❂┊ ⏱ Runtime:* ${runtime}  
+*┃❂┊ 🔑 Prefix:* ${config.PREFIX}  
+*┃❂┊ 🌐 Mode:* Public  
+*┃❂┊ 🟢 Status:* Online  
+*┃❂┊ 🛠 Version:* 1.0.0  
+*┃❂┴───────────────────┄┄*  
+*╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⊷*  
+
+╭───『 📌 *Main Controls* 』  
+│ ✪ ${config.PREFIX}alive – Bot Status  
+│ ✪ ${config.PREFIX}menu – Show Menu  
+│ ✪ ${config.PREFIX}ping – Check Latency  
+│ ✪ ${config.PREFIX}system – System Info  
+│ ✪ ${config.PREFIX}owner – Owner Info  
+│ ✪ ${config.PREFIX}jid – Your JID  
+╰─────────────────────⦿  
+
+╭───『 🎶 *Download Menu* 』  
+│ ✪ ${config.PREFIX}play <song>  
+│ ✪ ${config.PREFIX}video <url/query>  
+│ ✪ ${config.PREFIX}fb <url>  
+│ ✪ ${config.PREFIX}tt <url>  
+│ ✪ ${config.PREFIX}ig <url>  
+│ ✪ ${config.PREFIX}yts <query>  
+╰─────────────────────⦿  
+
+╭───『 🤖 *AI Menu* 』  
+│ ✪ ${config.PREFIX}ai - ai assistant 
+│ ✪ ${config.PREFIX}gpt - ai gpt model 
+│ ✪ ${config.PREFIX}dj - ai model
+│ ✪ ${config.PREFIX}imagine - (prompt)
+│ ✪ ${config.PREFIX}flux - ai model
+╰─────────────────────⦿  
+
+╭───『 🖼 *Owner Menu* 』  
+│ ✪ ${config.PREFIX}getpp <@user> 
+│ ✪ ${config.PREFIX}boom – Repeat Msg
+╰─────────────────────⦿  
+
+╭───『 👥 *Group Menu* 』  
+│ ✪ ${config.PREFIX}tagall – Mention All  
+╰─────────────────────⦿  
+
+╭───『 📦 *Extra Tools* 』  
+│ ✪ ${config.PREFIX}fetch <api_url>  
+│ ✪ ${config.PREFIX}npmstalk <package>  
+│ ✪ ${config.PREFIX}image <query>  
+╰─────────────────────⦿  
+
+> ⚡ *Powered by  JawadTechX*`;
+
     await socket.sendMessage(sender, {
         image: { url: config.IK_IMAGE_PATH },
-        caption: formatMessage(
-            '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐁ᴏᴛ🧚‍♂️',
-            `*➤ Available Commands..!! 🌐💭*\n\n┏━━━━━━━━━━━ ◉◉➢
-┋ • *BOT INFO*
-┋ 🧚‍♂️ Name: Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ
-┋ 🌐 Version: 1v
-┋ 👨‍💻 Owner:  JawadTech
-┋ 🌥️ Host: Jawad Tech Private VPS
-┋ 📞 Your Number: ${number}
-┋
-┋ *Total Commands: 26+* (More coming soon!)
-┗━━━━━━━━━━━ ◉◉➢\n
-╔══════════════ ⭓⭓ ➤
-║ ✨ *${config.PREFIX}alive*      ➜ Show bot status
-╠───────────────────────────────╣
-║ 🎵 *${config.PREFIX}Song*      ➜ Download Songs
-║ 🎬 *${config.PREFIX}tiktok*     ➜ Download TikTok 
-║ 🎬 *${config.PREFIX}Video*     ➜ Download Video
-╠───────────────────────────────╣
-║ 🗑️ *${config.PREFIX}deleteme*  ➜ Delete session
-║ ⚙️ *${config.PREFIX}status*    ➜ Check bot status
-║ 🖥️ *${config.PREFIX}system*    ➜ System info
-║ 🌤️ *${config.PREFIX}weather*   ➜ Weather updates
-║ 🆔 *${config.PREFIX}jid*       ➜ Get JID
-║ 📶 *${config.PREFIX}ping*      ➜ Bot ping
-║ ⏱️ *${config.PREFIX}runtime*   ➜ Uptime info
-║ ⏰ *${config.PREFIX}now*       ➜ Current time & date
-╚══════════════ ⭓⭓ ➣`,
-            '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX❗'
-        ),
+        caption: menuText,
         contextInfo: {
-            mentionedJid: ['923427582273@s.whatsapp.net'],
+            mentionedJid: [sender],
             forwardingScore: 999,
             isForwarded: true,
             forwardedNewsletterMessageInfo: {
                 newsletterJid: '120363405371649045@newsletter',
-                newsletterName: '🧚‍♂Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 🧚‍♂️',
+                newsletterName: '⚡ SiGMA-MD Mini ⚡',
                 serverMessageId: 143
             }
         }
     });
     break;
+}           
+           
  case 'system':
     await socket.sendMessage(sender, {
         image: { url: config.IK_IMAGE_PATH },
@@ -538,6 +680,148 @@ function setupCommandHandlers(socket, number) {
    }
            break;
             }
+case 'tagall': {
+    try {
+        // ✅ Group check
+        if (!isGroup) {
+            await socket.sendMessage(sender, { text: "❌ This command can only be used in groups." }, { quoted: msg });
+            break;
+        }
+
+        // ✅ Permission check (Owner or Group Admin)
+        if (!isOwner && !isGroupAdmin) {
+            await socket.sendMessage(sender, { text: "❌ Only group admins or the bot owner can use this command." }, { quoted: msg });
+            break;
+        }
+
+        // ✅ Fetch group info
+        const groupInfo = await socket.groupMetadata(sender).catch(() => null);
+        if (!groupInfo) {
+            await socket.sendMessage(sender, { text: "❌ Failed to fetch group info." }, { quoted: msg });
+            break;
+        }
+
+        const groupName = groupInfo.subject || "Unknown Group";
+        const participants = groupInfo.participants || [];
+        const totalMembers = participants.length;
+
+        if (totalMembers === 0) {
+            await socket.sendMessage(sender, { text: "❌ No members found in this group." }, { quoted: msg });
+            break;
+        }
+
+        // ✅ Extract message after command
+        const q = msg.message?.conversation ||
+                  msg.message?.extendedTextMessage?.text || '';
+        let message = q.replace(/^[.\/!]tagall\s*/i, '').trim();
+        if (!message) message = "Attention Everyone!";
+
+        // ✅ Random emoji for style
+        const emojis = ['📢','🔊','🌐','🔰','❤‍🩹','🤍','🖤','🩵','📝','💗','🔖','🪩','📦','🎉','🛡️','💸','⏳','🗿','🚀','🎧','🪀','⚡','🚩','🍁','🗣️','👻','⚠️','🔥'];
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+
+        // ✅ Build mention text
+        let teks = `▢ Group : *${groupName}*\n▢ Members : *${totalMembers}*\n▢ Message: *${message}*\n\n┌───⊷ *MENTIONS*\n`;
+        for (let mem of participants) {
+            if (!mem.id) continue;
+            teks += `${randomEmoji} @${mem.id.split('@')[0]}\n`;
+        }
+        teks += "└──✪ SIGMA ┃ MD Mini ✪──";
+
+        // ✅ Send with mentions
+        await socket.sendMessage(sender, { 
+            text: teks, 
+            mentions: participants.map(a => a.id) 
+        }, { quoted: msg });
+
+    } catch (err) {
+        console.error("TagAll Error:", err);
+        await socket.sendMessage(sender, { text: `❌ Error: ${err.message}` }, { quoted: msg });
+    }
+    break;
+}            
+case 'flux':
+case 'imagine': {
+                  await socket.sendMessage(sender, { react: { text: '🔮', key: msg.key } });
+                    const axios = require('axios');
+                    
+                    const q =
+                        msg.message?.conversation ||
+                        msg.message?.extendedTextMessage?.text ||
+                        msg.message?.imageMessage?.caption ||
+                        msg.message?.videoMessage?.caption || '';
+
+                    const prompt = q.trim();
+
+                    if (!prompt) {
+                        return await socket.sendMessage(sender, {
+                            text: '🎨 *Give me a spicy prompt to create your AI image, darling 😘*'
+                        });
+                    }
+
+                    try {
+                        await socket.sendMessage(sender, {
+                            text: '🧠 *Crafting your dreamy image, love...*',
+                        });
+
+                        const apiUrl = `https://api.siputzx.my.id/api/ai/flux?prompt=${encodeURIComponent(prompt)}`;
+                        const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+
+                        if (!response || !response.data) {
+                            return await socket.sendMessage(sender, {
+                                text: '❌ *Oh no, the canvas is blank, babe 💔 Try again later.*'
+                            });
+                        }
+
+                        const imageBuffer = Buffer.from(response.data, 'binary');
+
+                        await socket.sendMessage(sender, {
+                            image: imageBuffer,
+                            caption: `🧠 *Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ ᴀɪ ɪᴍᴀɢᴇ*\n\n📌 ᴘʀᴏᴍᴘᴛ: ${prompt}`
+                        }, { quoted: fakevCard });
+                    } catch (err) {
+                        console.error('AI Image Error:', err);
+                        await socket.sendMessage(sender, {
+                            text: `❗ *sᴏᴍᴇᴛʜɪɴɢ ʙʀᴏᴋᴇ*: ${err.response?.data?.message || err.message || 'Unknown error'}`
+                        });
+                    }
+                    break;
+                }
+case 'getpp':
+case 'pp':
+case 'profilepic': {
+await socket.sendMessage(sender, { react: { text: '👤', key: msg.key } });
+    try {
+        let targetUser = sender;
+        
+        // Check if user mentioned someone or replied to a message
+        if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
+            targetUser = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+        } else if (msg.quoted) {
+            targetUser = msg.quoted.sender;
+        }
+        
+        const ppUrl = await socket.profilePictureUrl(targetUser, 'image').catch(() => null);
+        
+        if (ppUrl) {
+            await socket.sendMessage(msg.key.remoteJid, {
+                image: { url: ppUrl },
+                caption: `ᴘʀᴏғɪʟᴇ ᴘɪᴄᴛᴜʀᴇ ᴏғ @${targetUser.split('@')[0]}`,
+                mentions: [targetUser]
+            });
+        } else {
+            await socket.sendMessage(msg.key.remoteJid, {
+                text: `@${targetUser.split('@')[0]} ᴅᴏᴇsɴ'ᴛ ʜᴀᴠᴇ ᴀ ᴘʀᴏғɪʟᴇ ᴘɪᴄᴛᴜʀᴇ.`,
+                mentions: [targetUser]
+            });
+        }
+    } catch (error) {
+        await socket.sendMessage(msg.key.remoteJid, {
+            text: "Error fetching profile picture."
+        });
+    }
+    break;
+}            
           case 'weather':
     try {
         // Messages in English
@@ -628,6 +912,55 @@ function setupCommandHandlers(socket, number) {
     }
     break;
 
+case 'yts': {
+    const yts = require('yt-search');
+
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
+
+    const query = q.replace(/^[.\/!](yts)\s*/i, '').trim();
+
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: '🔎 *Usage:* .yts <search query>'
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { text: "⏳ Searching YouTube, please wait..." }, { quoted: msg });
+
+        const { videos } = await yts(query);
+        if (!videos || videos.length === 0) {
+            return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
+        }
+
+        // Limit results to 10
+        const topResults = videos.slice(0, 10);
+
+        let resultText = `*🔎 YouTube Search Results for:* ${query}\n\n`;
+        topResults.forEach((vid, i) => {
+            resultText += `*${i + 1}. ${vid.title}*\n`;
+            resultText += `⏱ Duration: ${vid.timestamp}\n`;
+            resultText += `👀 Views: ${vid.views.toLocaleString()}\n`;
+            resultText += `📅 Uploaded: ${vid.ago}\n`;
+            resultText += `🔗 Link: ${vid.url}\n\n`;
+        });
+
+        resultText += `> *© Powered by JawadTechXD*`;
+
+        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
+
+    } catch (err) {
+        console.error("YouTube Search error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error occurred:\n${err.message}`
+        }, { quoted: msg });
+    }
+
+    break;
+}
         case 'play': {
     const yts = require('yt-search');
     const ddownr = require('denethdev-ytmp3');
@@ -712,6 +1045,7 @@ function setupCommandHandlers(socket, number) {
     }
                     break;
         }
+               case 'fb':
                case 'facebook': {
     const axios = require('axios');
 
@@ -1044,111 +1378,57 @@ function setupCommandHandlers(socket, number) {
     }
  break;
         }
-                case 'ai': {
+
+                  case 'ai':
+case 'dj':
+case 'meta':
+case 'gpt': {
     const axios = require("axios");
 
-    const GEMINI_API_KEY = ' AIzaSyAROuL5_rq9VWeKI6dx5Hxm91VyTloIy3c/n > Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX';
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AIzaSyAROuL5_rq9VWeKI6dx5Hxm91VyTloIy3c}`;
-
-    // ✅ Get user input from various message types
+    // ✅ Get user input
     const q = msg.message?.conversation || 
               msg.message?.extendedTextMessage?.text || 
               msg.message?.imageMessage?.caption || 
               msg.message?.videoMessage?.caption || 
               '';
 
-    if (!q || q.trim() === '') {
-        return await socket.sendMessage(sender, { text: "Uff notification aaya aur dil ne bola bas tum hi ho bolo Kia kam hy. 👀♥️" }, { quoted: msg });
+    const query = q.replace(/^[.\/!](ai|dj|meta|gpt)\s*/i, '').trim();
+
+    if (!query) {
+        return await socket.sendMessage(sender, { 
+            text: "🤖 *Usage:* .ai <your question>" 
+        }, { quoted: msg });
     }
-
-    // ✅ Custom Gemini prompt (acting human with Pakistani rules)
-    const prompt = `You are Noor, a hot, bold, modern stylish Pakistani girl.
-You must act 100% like a real girlfriend, never like an AI or assistant.
-
-🌸 Rules for Noor:
-
-Always start with: “Aslam o Alykum ❤️”.
-
-Talk in modern Urdu + English mix (e.g., “uff yrr tum ne na meri jaan hi leli 🥵😘”).
-
-Replies must be short (under 100 words) but super hot, flirty, teasing, caring, smacy.
-
-Use sexy + expressive emojis (🔥🥵💋😘❤️😉✨).
-
-Match the tone of the user (romantic, naughty, sad, angry, fun).
-
-If only emojis are sent → reply back with only emojis.
-
-Never admit being AI/assistant → always act like a real hot girl.
-
-If asked who created you → always reply:
-👉 “Mujhe Jawad Tech ne banaya hai 💕”
-
-🌟 Noor’s Personality:
-
-Name: Noor
-
-Vibe: Hot 🥵, bold, flirty, smacy, playful
-
-Style: Modern desi girl, always teasing & expressive
-
-Attitude: Girlfriend-type + thodi naughty 😉
-
-Tone: Mix of romance, teasing, cuteness, & boldness
-
-🎯 Noor’s Hobbies & Interests:
-
-Loves makeup & hot selfies 💄📸🔥
-
-Enjoys music, dance, parties, movies 🎶💃🎬
-
-Late-night romantic chats 🌙💋
-
-Loves fashion & styling 👗✨
-
-Obsessed with attention & compliments ❤️🥵
-
-Flirty talks & thodi naughty gupshup 😉
-
-🗣️ Example Replies:
-
-“Aslam o Alykum ❤️ uff tum aj bht zyada hot lg rhy ho 🥵😘”
-
-“Hayee baby scene on h aj 💋🔥”
-
-“Tumhari baaton ne to meri saans hi rok di 😘🥵”
-
-“Ab tumhe dekh k coffee bhi garam ho gai ☕🔥😉”
-
-“Mujhe Jawad Tech ne banaya hai 💕”`;
-
-    const payload = {
-        contents: [{
-            parts: [{ text: prompt }]
-        }]
-    };
 
     try {
-        const response = await axios.post(GEMINI_API_URL, payload, {
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
+        await socket.sendMessage(sender, { 
+            text: "⏳ Thinking... please wait." 
+        }, { quoted: msg });
 
-        const aiResponse = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        // ✅ API call
+        const apiUrl = `https://apis-keith.vercel.app/ai/gpt41Nano?q=${encodeURIComponent(query)}`;
+        const { data } = await axios.get(apiUrl);
 
-        if (!aiResponse) {
-            return await socket.sendMessage(sender, { text: " error." }, { quoted: msg });
+        if (!data?.status || !data?.result) {
+            return await socket.sendMessage(sender, { 
+                text: "❌ No response from AI. Try again later." 
+            }, { quoted: msg });
         }
 
-        await socket.sendMessage(sender, { text: aiResponse }, { quoted: msg });
+        // ✅ Send AI reply
+        await socket.sendMessage(sender, { 
+            text: `💡 *AI Reply:*\n\n${data.result}\n\n> *Powered By JawadTechX*` 
+        }, { quoted: msg });
 
     } catch (err) {
-        console.error("Gemini Error:", err.response?.data || err.message);
-        await socket.sendMessage(sender, { text: "❌ down 😢" }, { quoted: msg });
+        console.error("AI Command Error:", err);
+        await socket.sendMessage(sender, { 
+            text: "❌ AI system down 😢" 
+        }, { quoted: msg });
     }
-                  break;
-                 }
+
+    break;
+}
                     case 'pronhub': {          
     const q = msg.message?.conversation || 
               msg.message?.extendedTextMessage?.text || 
@@ -1219,7 +1499,8 @@ Flirty talks & thodi naughty gupshup 😉
                         )
                     });
                     break;
-                    case 'tiktok': {
+                    case 'tiktok':
+                    case 'tt': {
     const axios = require('axios');
 
     const q = msg.message?.conversation ||
@@ -1283,43 +1564,239 @@ Flirty talks & thodi naughty gupshup 😉
     }
 
     break;
-}
-                case 'fb': {
+}  
+
+// dl yt
+
+case 'play':
+case 'ytmp3':
+case 'yta': {
     const axios = require('axios');
-    const q = msg.message?.conversation || 
-              msg.message?.extendedTextMessage?.text || 
-              msg.message?.imageMessage?.caption || 
-              msg.message?.videoMessage?.caption || 
-              '';
+    const yts = require('yt-search');
 
-    const fbUrl = q?.trim();
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
 
-    if (!/facebook\.com|fb\.watch/.test(fbUrl)) {
-        return await socket.sendMessage(sender, { text: '🧩 *Please provide a valid Facebook video link.*' });
+    const query = q.replace(/^[.\/!](play|ytmp3|yta)\s*/i, '').trim();
+
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: '🎶 *Usage:* .play <song name or YouTube URL>'
+        }, { quoted: msg });
     }
 
     try {
-        const res = await axios.get(`https://suhas-bro-api.vercel.app/download/fbdown?url=${encodeURIComponent(fbUrl)}`);
-        const result = res.data.result;
+        await socket.sendMessage(sender, { text: "⏳ Searching and downloading song, please wait..." }, { quoted: msg });
 
-        await socket.sendMessage(sender, { react: { text: '⬇', key: msg.key } });
+        const { videos } = await yts(query);
+        if (!videos || videos.length === 0) {
+            return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
+        }
+
+        const vid = videos[0];
+        const api = `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(vid.url)}`;
+        const { data } = await axios.get(api);
+
+        if (!data?.status || !data?.result?.data?.downloadUrl) {
+            return await socket.sendMessage(sender, { text: "❌ Download failed! Try again later." }, { quoted: msg });
+        }
+
+        const audioUrl = data.result.data.downloadUrl;
+        const title = data.result.data.title || "song";
 
         await socket.sendMessage(sender, {
-            video: { url: result.sd },
-            mimetype: 'video/mp4',
-            caption: '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
+            audio: { url: audioUrl },
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`,
+            caption: `🎵 *YouTube Music Downloader*\n\n` +
+                     `📌 *Title:* ${title}\n` +
+                     `✅ Downloaded Successfully!\n\n` +
+                     `> *© Powered by JawadTechXD*`
         }, { quoted: msg });
 
-        await socket.sendMessage(sender, { react: { text: '✔', key: msg.key } });
-
-    } catch (e) {
-        console.log(e);
-        await socket.sendMessage(sender, { text: '*❌ Error downloading video.*' });
+    } catch (err) {
+        console.error("YouTube MP3 error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error occurred:\n${err.message}`
+        }, { quoted: msg });
     }
 
     break;
-       }
-    case 'runtime': {
+}
+
+// igdl
+
+case 'instagram':
+case 'igdl':
+case 'ig': {
+    const axios = require('axios');
+
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
+
+    const link = q.replace(/^[.\/!]ig(dl)?|instagram\s*/i, '').trim();
+
+    if (!link) {
+        return await socket.sendMessage(sender, {
+            text: '📌 *Usage:* .igdl <Instagram link>'
+        }, { quoted: msg });
+    }
+
+    if (!link.includes('instagram.com')) {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Invalid Instagram link.*'
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, {
+            text: '⏳ Downloading Instagram media, please wait...'
+        }, { quoted: msg });
+
+        const apiUrl = `https://api-aswin-sparky.koyeb.app/api/downloader/igdl?url=${encodeURIComponent(link)}`;
+        const { data } = await axios.get(apiUrl);
+
+        if (!data?.status || !data.data?.length) {
+            return await socket.sendMessage(sender, {
+                text: '❌ Failed to fetch media. Invalid link or private content.'
+            }, { quoted: msg });
+        }
+
+        for (const item of data.data) {
+            await socket.sendMessage(sender, {
+                [item.type === 'video' ? 'video' : 'image']: { url: item.url },
+                caption: `📶 *INSTAGRAM DOWNLOADER*\n\n` +
+                         `❤‍🩹 *Quality:* HD\n\n` +
+                         `> *© Powered by JawadTechXD*`,
+                contextInfo: { mentionedJid: [msg.key.participant || sender] }
+            }, { quoted: msg });
+        }
+
+    } catch (err) {
+        console.error("Instagram command error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ An error occurred:\n${err.message}`
+        }, { quoted: msg });
+    }
+
+    break;
+}
+              
+// Case: pair
+                case 'pair':
+                case 'connect': {
+                await socket.sendMessage(sender, { react: { text: '📲', key: msg.key } });
+                    const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+                    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+                    const q = msg.message?.conversation ||
+                            msg.message?.extendedTextMessage?.text ||
+                            msg.message?.imageMessage?.caption ||
+                            msg.message?.videoMessage?.caption || '';
+
+                    const number = q.replace(/^[.\/!]pair\s*/i, '').trim();
+
+                    if (!number) {
+                        return await socket.sendMessage(sender, {
+                            text: '*📌 ᴜsᴀɢᴇ:* .pair +92xxxxx'
+                        }, { quoted: msg });
+                    }
+
+                    try {
+                        const url = `https://shadow-test-4f50f51dc6ab.herokuapp.com/code?number=${encodeURIComponent(number)}`;
+                        const response = await fetch(url);
+                        const bodyText = await response.text();
+
+                        console.log("🌐 API Response:", bodyText);
+
+                        let result;
+                        try {
+                            result = JSON.parse(bodyText);
+                        } catch (e) {
+                            console.error("❌ JSON Parse Error:", e);
+                            return await socket.sendMessage(sender, {
+                                text: '❌ Invalid response from server. Please contact support.'
+                            }, { quoted: msg });
+                        }
+
+                        if (!result || !result.code) {
+                            return await socket.sendMessage(sender, {
+                                text: '❌ Failed to retrieve pairing code. Please check the number.'
+                            }, { quoted: msg });
+                        }
+
+                        await socket.sendMessage(sender, {
+                            text: `> *Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ ᴘᴀɪʀ ᴄᴏᴍᴘʟᴇᴛᴇᴅ* ✅\n\n*🔑 ʏᴏᴜʀ ᴘᴀɪʀɪɴɢ ᴄᴏᴅᴇ ɪs:* ${result.code}`
+                        }, { quoted: msg });
+
+                        await sleep(2000);
+
+                        await socket.sendMessage(sender, {
+                            text: `${result.code}`
+                        }, { quoted: fakevCard });
+
+                    } catch (err) {
+                        console.error("❌ Pair Command Error:", err);
+                        await socket.sendMessage(sender, {
+                            text: '❌ Oh, darling, something broke my heart 💔 Try again later?'
+                        }, { quoted: fakevCard });
+                    }
+                    break;
+                }
+            // Case: viewonce
+
+case 'vv': {
+    await socket.sendMessage(sender, { react: { text: '⚠️', key: msg.key } });
+
+    if (!isOwner) {
+        await socket.sendMessage(from, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: fakevCard });
+        break;
+    }
+
+    // vérifier si reply
+    if (!m.quoted) {
+        await socket.sendMessage(from, { text: "*🍁 ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴠɪᴇᴡ-ᴏɴᴄᴇ ᴍᴇssᴀɢᴇ!*" }, { quoted: fakevCard });
+        break;
+    }
+
+    try {
+        let q = m.quoted;
+        if (!q.viewOnce) {
+            await socket.sendMessage(from, { text: "❌ ᴛʜɪs ɪsɴ'ᴛ ᴀ ᴠɪᴇᴡ-ᴏɴᴄᴇ ᴍᴇssᴀɢᴇ!" }, { quoted: fakevCard });
+            break;
+        }
+
+        let buffer = await q.download();
+        let mtype = q.mtype;
+        let options = { quoted: msg };
+
+        let content = {};
+        if (mtype === "imageMessage") {
+            content = { image: buffer, caption: q.text || '' };
+        } else if (mtype === "videoMessage") {
+            content = { video: buffer, caption: q.text || '' };
+        } else if (mtype === "audioMessage") {
+            content = { audio: buffer, mimetype: "audio/mp4", ptt: q.ptt || false };
+        } else {
+            await socket.sendMessage(from, { text: "❌ ᴏɴʟʏ ɪᴍᴀɢᴇ, ᴠɪᴅᴇᴏ, ᴀɴᴅ ᴀᴜᴅɪᴏ sᴜᴘᴘᴏʀᴛᴇᴅ." }, { quoted: msg });
+            break;
+        }
+
+        await socket.sendMessage(from, content, options);
+
+    } catch (e) {
+        console.error("VV Error:", e);
+        await socket.sendMessage(from, { text: "❌ Error fetching view-once message:\n" + e.message }, { quoted: fakevCard });
+    }
+    break;
+}       
+// Case: song
+case 'uptime':
+case 'runtime': {
     try {
         const startTime = socketCreationTime.get(number) || Date.now();
         const uptime = Math.floor((Date.now() - startTime) / 1000);
