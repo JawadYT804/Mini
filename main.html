@@ -17,7 +17,6 @@
       --neon-glow: 0 0 10px rgba(0, 128, 255, 0.7),
                    0 0 20px rgba(0, 128, 255, 0.5),
                    0 0 30px rgba(0, 128, 255, 0.3);
-      --stats-bg: rgba(10, 25, 41, 0.7);
     }
 
     * {
@@ -81,46 +80,6 @@
       font-size: 14px;
       color: rgba(255, 255, 255, 0.7);
       margin-bottom: 20px;
-    }
-
-    .stats-container {
-      background: var(--stats-bg);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-color);
-    }
-
-    .stats-title {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 15px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .stat-item {
-      background: rgba(16, 42, 68, 0.5);
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary-color);
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.7);
     }
 
     .social-icons {
@@ -347,10 +306,6 @@
         font-size: 16px;
         min-height: 50px;
       }
-      
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -362,9 +317,7 @@
     <div class="header">
       <div class="logo"><i class="fas fa-robot"></i></div>
       <h1 class="title">SIGMA-MD Mini Bot</h1>
-      <p class="subtitle">Generate your WhatsApp pair code</p> 
-        </div>
-      </div>
+      <p class="subtitle">Generate your WhatsApp pair code</p>
       
       <div class="social-icons">
         <a href="https://www.youtube.com/@JawadTechX" target="_blank" class="youtube"><i class="fab fa-youtube"></i></a>
@@ -402,7 +355,7 @@
   </div>
 
   <!-- Toast -->
-  <div id="toast">Code Copied</div>
+  <div id="toast">Code copied to clipboard!</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
   <script>
@@ -416,26 +369,6 @@
         dot.style.animationDelay = Math.random() * 15 + 's';
         dot.style.animationDuration = 10 + Math.random() * 20 + 's';
         bgAnimation.appendChild(dot);
-      }
-    }
-    
-    // Fetch GitHub stats
-    async function fetchGitHubStats() {
-      try {
-        const response = await axios.get('https://api.github.com/repos/JawadYT36/KHAN-MD');
-        const data = response.data;
-        
-        document.getElementById('stars').textContent = data.stargazers_count.toLocaleString();
-        document.getElementById('forks').textContent = data.forks_count.toLocaleString();
-        document.getElementById('watchers').textContent = data.watchers_count.toLocaleString();
-        document.getElementById('issues').textContent = data.open_issues_count.toLocaleString();
-      } catch (error) {
-        console.error('Error fetching GitHub stats:', error);
-        // Set fallback values
-        document.getElementById('stars').textContent = '1.2K';
-        document.getElementById('forks').textContent = '500';
-        document.getElementById('watchers').textContent = '100';
-        document.getElementById('issues').textContent = '25';
       }
     }
     
@@ -509,7 +442,6 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       createBackgroundAnimation();
-      fetchGitHubStats();
     });
   </script>
 </body>
