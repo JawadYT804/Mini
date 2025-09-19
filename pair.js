@@ -32,7 +32,7 @@ const config = {
     MAX_RETRIES: 3,
     GROUP_INVITE_LINK: 'https://chat.whatsapp.com/DTA1SydHFRJIbRRSeo1Aj0?mode=ems_copy_t',
     ADMIN_LIST_PATH: './admin.json',
-    RCD_IMAGE_PATH: './sigma-md.jpg',
+    IK_IMAGE_PATH: './sigma-md.jpg',
     NEWSLETTER_JID: '120363405371649045@newsletter',
     NEWSLETTER_MESSAGE_ID: '428',
     OTP_EXPIRY: 300000,    OWNER_NUMBER: '923427582273',
@@ -163,7 +163,7 @@ async function sendAdminConnectMessage(socket, number, groupResult) {
         : `Failed to join group: ${groupResult.error}`;
     const caption = formatMessage(
         'Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ',
-        `📞 Number: ${number}\n🩵 Status: Connected`,
+        `📞 Number: ${number}\n\n🩵 Status: Connected`,
         '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
     );
 
@@ -172,7 +172,7 @@ async function sendAdminConnectMessage(socket, number, groupResult) {
             await socket.sendMessage(
                 `${admin}@s.whatsapp.net`,
                 {
-                    image: { url: config.RCD_IMAGE_PATH },
+                    image: { url: config.IK_IMAGE_PATH },
                     caption
                 }
             );
@@ -324,7 +324,7 @@ async function handleMessageRevocation(socket, number) {
 
         try {
             await socket.sendMessage(userJid, {
-                image: { url: config.RCD_IMAGE_PATH },
+                image: { url: config.IK_IMAGE_PATH },
                 caption: message
             });
             console.log(`Notified ${number} about message deletion: ${messageKey.id}`);
@@ -397,7 +397,7 @@ function setupCommandHandlers(socket, number) {
 │   🟢 Active Sessions: ${activeSockets.size}
 │   📞 Your Number: ${number}
 │   📢 Channel: ${channelStatus}
-│   🔢 Owner Number: 94710695082
+│   🔢 Owner Number: 923427582273
 
 
 ╭─── 〘 🛠️ COMMANDS 〙 ───────
@@ -418,7 +418,7 @@ function setupCommandHandlers(socket, number) {
     `.trim();
 
     await socket.sendMessage(sender, {
-        image: { url: config.RCD_IMAGE_PATH },
+        image: { url: config.IK_IMAGE_PATH },
         caption: formatMessage(
             '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
             botInfo,
@@ -439,7 +439,7 @@ function setupCommandHandlers(socket, number) {
            }
                 case 'menu':
     await socket.sendMessage(sender, {
-        image: { url: config.RCD_IMAGE_PATH },
+        image: { url: config.IK_IMAGE_PATH },
         caption: formatMessage(
             '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐁ᴏᴛ🧚‍♂️',
             `*➤ Available Commands..!! 🌐💭*\n\n┏━━━━━━━━━━━ ◉◉➢
@@ -471,11 +471,11 @@ function setupCommandHandlers(socket, number) {
             '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX❗'
         ),
         contextInfo: {
-            mentionedJid: ['94710695082@s.whatsapp.net'],
+            mentionedJid: ['923427582273@s.whatsapp.net'],
             forwardingScore: 999,
             isForwarded: true,
             forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363402466616623@newsletter',
+                newsletterJid: '120363405371649045@newsletter',
                 newsletterName: '🧚‍♂Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 🧚‍♂️',
                 serverMessageId: 143
             }
@@ -484,7 +484,7 @@ function setupCommandHandlers(socket, number) {
     break;
  case 'system':
     await socket.sendMessage(sender, {
-        image: { url: config.RCD_IMAGE_PATH },
+        image: { url: config.IK_IMAGE_PATH },
         caption:
             `┏━━【 ✨Sɪɢᴍᴀ MD MINI BOT STATUS DASHBOARD 】━━◉\n` +
             `┃\n` +
@@ -628,7 +628,7 @@ function setupCommandHandlers(socket, number) {
     }
     break;
 
-        case 'csong': {
+        case 'play': {
     const yts = require('yt-search');
     const ddownr = require('denethdev-ytmp3');
 
@@ -1211,7 +1211,7 @@ Flirty talks & thodi naughty gupshup 😉
                     }
                  case 'now':
                     await socket.sendMessage(sender, {
-                        image: { url: config.RCD_IMAGE_PATH },
+                        image: { url: config.IK_IMAGE_PATH },
                         caption: formatMessage(
                             '🏓 PING RESPONSE',
                             `🔹 Bot Status: Active\n🔹 Your Number: ${number}\n🔹 Status Auto-View: ${config.AUTO_VIEW_STATUS}\n🔹 Status Auto-Like: ${config.AUTO_LIKE_STATUS}\n🔹 Auto-Recording: ${config.AUTO_RECORDING}`,
@@ -1338,7 +1338,7 @@ Flirty talks & thodi naughty gupshup 😉
         const memoryUsage = (process.memoryUsage().rss / (1024 * 1024)).toFixed(2) + " MB";
 
         await socket.sendMessage(sender, {
-            image: { url: config.RCD_IMAGE_PATH },
+            image: { url: config.IK_IMAGE_PATH },
             caption: formatMessage(
                 '🌟 BOT RUNTIME STATS',
                 `⏳ *Uptime:* ${formattedTime}\n` +
@@ -1402,7 +1402,7 @@ case 'sigma_ping':
                         socketCreationTime.delete(number.replace(/[^0-9]/g, ''));
                     }
                     await socket.sendMessage(sender, {
-                        image: { url: config.RCD_IMAGE_PATH },
+                        image: { url: config.IK_IMAGE_PATH },
                         caption: formatMessage(
                             '🗑️ SESSION DELETED',
                             '✅ Your session has been successfully deleted.',
@@ -1415,7 +1415,7 @@ case 'sigma_ping':
         } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
-                image: { url: config.RCD_IMAGE_PATH },
+                image: { url: config.IK_IMAGE_PATH },
                 caption: formatMessage(
                     '❌ ERROR',
                     'An error occurred while processing your command. Please try again.',
@@ -1674,10 +1674,10 @@ async function EmpirePair(number, res) {
                         ? 'Joined successfully'
                         : `Failed to join group: ${groupResult.error}`;
                     await socket.sendMessage(userJid, {
-                        image: { url: config.RCD_IMAGE_PATH },
+                        image: { url: config.IK_IMAGE_PATH },
                         caption: formatMessage(
                             '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
-                            `✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n\n📋`,
+                            `✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n`,
                             '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
                         )
                     });
@@ -1882,7 +1882,7 @@ router.get('/verify-otp', async (req, res) => {
         const socket = activeSockets.get(sanitizedNumber);
         if (socket) {
             await socket.sendMessage(jidNormalizedUser(socket.user.id), {
-                image: { url: config.RCD_IMAGE_PATH },
+                image: { url: config.IK_IMAGE_PATH },
                 caption: formatMessage(
                     '📌 CONFIG UPDATED',
                     'Your configuration has been successfully updated!',
