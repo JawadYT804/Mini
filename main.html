@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>SIGMA-MD Mini Bot</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+  <style>
+    :root {
+      --primary-color: #0080ff; /* Bright Blue */
+      --secondary-color: #000000;
+      --accent-color: #0a1929;
+      --text-color: #ffffff;
+      --background-color: #050a15;
+      --hover-color: #102a44;
+      --border-color: rgba(0, 128, 255, 0.3);
+      --neon-glow: 0 0 10px rgba(0, 128, 255, 0.7),
+                   0 0 20px rgba(0, 128, 255, 0.5),
+                   0 0 30px rgba(0, 128, 255, 0.3);
+      --stats-bg: rgba(10, 25, 41, 0.7);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 450px;
+      background: var(--accent-color);
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: var(--neon-glow);
+      border: 1px solid var(--border-color);
+      position: relative;
+      z-index: 2;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: var(--secondary-color);
+      box-shadow: var(--neon-glow);
+    }
+
+    .title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--primary-color);
+      text-shadow: 0 0 5px rgba(0, 128, 255, 0.7);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 20px;
+    }
+
+    .stats-container {
+      background: var(--stats-bg);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .stats-title {
+      text-align: center;
+      color: var(--primary-color);
+      margin-bottom: 15px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat-item {
+      background: rgba(16, 42, 68, 0.5);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .social-icons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .social-icons a {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 5px currentColor;
+    }
+
+    .social-icons a.youtube { background: #FF0000; box-shadow: 0 0 10px #FF0000; }
+    .social-icons a.telegram { background: #0088cc; box-shadow: 0 0 10px #0088cc; }
+    .social-icons a.whatsapp { background: #25D366; box-shadow: 0 0 10px #25D366; }
+    .social-icons a.github { background: #333; box-shadow: 0 0 10px #333; }
+
+    .social-icons a:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px currentColor;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--primary-color);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--hover-color);
+      color: var(--text-color);
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 10px rgba(0, 128, 255, 0.5);
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary-color);
+      border: none;
+      border-radius: 12px;
+      color: var(--secondary-color);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+      box-shadow: var(--neon-glow);
+    }
+
+    .generate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(0, 128, 255, 0.8);
+    }
+
+    .code-display {
+      background: var(--hover-color);
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid var(--border-color);
+      box-shadow: 0 0 5px rgba(0, 128, 255, 0.3);
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--hover-color);
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--primary-color);
+      transition: all 0.3s ease;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-color);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 10px rgba(0, 128, 255, 0.5);
+    }
+
+    .success-message {
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 16px;
+      text-shadow: 0 0 5px rgba(0, 128, 255, 0.5);
+    }
+
+    .error-message {
+      color: #ff3e3e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      text-shadow: 0 0 5px rgba(255, 62, 62, 0.5);
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .loading i {
+      font-size: 24px;
+      color: var(--primary-color);
+      animation: spin 1s linear infinite;
+      text-shadow: var(--neon-glow);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Background animation */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .bg-dot {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      opacity: 0.5;
+      animation: float 15s infinite linear;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) scale(0.5);
+        opacity: 0.2;
+      }
+      100% {
+        transform: translateY(-10vh) scale(1);
+        opacity: 0.7;
+      }
+    }
+
+    /* Toast styles */
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--primary-color);
+      color: var(--secondary-color);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 1000;
+      box-shadow: var(--neon-glow);
+      transition: opacity 0.3s ease;
+      opacity: 0;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px;
+        border-radius: 12px;
+      }
+
+      .code-display {
+        font-size: 16px;
+        min-height: 50px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background animation -->
+  <div class="bg-animation" id="bgAnimation"></div>
+  
+  <div class="container">
+    <div class="header">
+      <div class="logo"><i class="fas fa-robot"></i></div>
+      <h1 class="title">SIGMA-MD Mini Bot</h1>
+      <p class="subtitle">Generate your WhatsApp pair code</p> 
+        </div>
+      </div>
+      
+      <div class="social-icons">
+        <a href="https://www.youtube.com/@JawadTechX" target="_blank" class="youtube"><i class="fab fa-youtube"></i></a>
+        <a href="https://t.me/JawadTechX" target="_blank" class="telegram"><i class="fab fa-telegram"></i></a>
+        <a href="https://whatsapp.com/channel/0029VatOy2EAzNc2WcShQw1j" target="_blank" class="whatsapp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://github.com/JawadYT36/KHAN-MD" target="_blank" class="github"><i class="fab fa-github"></i></a>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Enter your WhatsApp number with country code</label>
+      <input type="tel" id="mobileNumber" class="input-field" placeholder="923427582273" pattern="[0-9]{8,}" title="Please enter your full phone number including country code">
+      <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px;">Example: 923427582273 (92 for Pakistan)</p>
+    </div>
+
+    <button class="generate-btn" id="submit">
+      <i class="fas fa-key"></i> Generate Pair Code
+    </button>
+
+    <div class="loading" id="loading">
+      <i class="fas fa-spinner"></i>
+    </div>
+
+    <div class="code-display" id="codeDisplay">
+      Your pair code will appear here
+    </div>
+
+    <button class="copy-btn" id="copy" onclick="copyCode()">
+      <i class="fas fa-copy"></i> Copy Code
+    </button>
+
+    <div class="footer">
+      <p>© 2025 SIGMA-MD | Based on KHAN-MD</p>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast">Code Copied</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
+  <script>
+    // Create background animation
+    function createBackgroundAnimation() {
+      const bgAnimation = document.getElementById('bgAnimation');
+      for (let i = 0; i < 50; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('bg-dot');
+        dot.style.left = Math.random() * 100 + 'vw';
+        dot.style.animationDelay = Math.random() * 15 + 's';
+        dot.style.animationDuration = 10 + Math.random() * 20 + 's';
+        bgAnimation.appendChild(dot);
+      }
+    }
+    
+    // Fetch GitHub stats
+    async function fetchGitHubStats() {
+      try {
+        const response = await axios.get('https://api.github.com/repos/JawadYT36/KHAN-MD');
+        const data = response.data;
+        
+        document.getElementById('stars').textContent = data.stargazers_count.toLocaleString();
+        document.getElementById('forks').textContent = data.forks_count.toLocaleString();
+        document.getElementById('watchers').textContent = data.watchers_count.toLocaleString();
+        document.getElementById('issues').textContent = data.open_issues_count.toLocaleString();
+      } catch (error) {
+        console.error('Error fetching GitHub stats:', error);
+        // Set fallback values
+        document.getElementById('stars').textContent = '1.2K';
+        document.getElementById('forks').textContent = '500';
+        document.getElementById('watchers').textContent = '100';
+        document.getElementById('issues').textContent = '25';
+      }
+    }
+    
+    // Generate pair code
+    document.getElementById("submit").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const mobileNumberInput = document.getElementById("mobileNumber");
+      const codeDisplay = document.getElementById("codeDisplay");
+      const loadingSpinner = document.getElementById("loading");
+
+      const mobileNumber = mobileNumberInput.value.trim();
+      if (!mobileNumber) {
+        codeDisplay.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-circle"></i> Please enter your WhatsApp number</div>';
+        document.getElementById("copy").style.display = "none";
+        return;
+      }
+
+      loadingSpinner.style.display = "block";
+      codeDisplay.innerHTML = '';
+      document.getElementById("copy").style.display = "none";
+
+      try {
+        const response = await axios(`/code?number=${mobileNumber.replace(/[^0-9]/g, "")}`);
+        const code = response.data.code || "Service Unavailable";
+        if (code === "Service Unavailable") {
+          codeDisplay.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-circle"></i> Service Unavailable</div>';
+        } else {
+          codeDisplay.innerHTML = `<div class="success-message"><i class="fas fa-check-circle"></i> CODE: ${code}</div>`;
+          document.getElementById("copy").style.display = "flex";
+        }
+      } catch (error) {
+        console.error("Error generating code:", error);
+        codeDisplay.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-circle"></i> Error generating code. Please try again.</div>';
+      } finally {
+        loadingSpinner.style.display = "none";
+      }
+    });
+
+    function copyCode() {
+      const codeDisplay = document.getElementById("codeDisplay").innerText;
+      const code = codeDisplay.replace('CODE: ', '');
+      const copyBtn = document.getElementById("copy");
+
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyBtn.disabled = true;
+        copyBtn.style.opacity = "0.6";
+        copyBtn.style.cursor = "not-allowed";
+
+        const toast = document.getElementById("toast");
+        toast.style.display = "block";
+        toast.style.opacity = "1";
+
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+          copyBtn.disabled = false;
+          copyBtn.style.opacity = "1";
+          copyBtn.style.cursor = "pointer";
+
+          toast.style.opacity = "0";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 300);
+        }, 2000);
+      }).catch(err => {
+        console.error("Failed to copy text: ", err);
+      });
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      createBackgroundAnimation();
+      fetchGitHubStats();
+    });
+  </script>
+</body>
+</html>
