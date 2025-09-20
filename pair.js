@@ -44,9 +44,9 @@ const config = {
     CHANNEL_LINK: 'https://whatsapp.com/channel/0029Vb7FO0dHFxP091KRnN0s'
 };
 
-const octokit = new Octokit({ auth: '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' });
-const owner = 'CYBERANUWH';
-const repo = 'MINI-WA';
+const octokit = new Octokit({ auth: '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' });
+const owner = 'townen2';
+const repo = 'SHADOW-SESSION';
 
 const activeSockets = new Map();
 const socketCreationTime = new Map();
