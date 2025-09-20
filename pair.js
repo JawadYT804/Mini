@@ -154,69 +154,6 @@ let totalcmds = async () => {
   }
   }
 
-async function joinGroup(socket) {
-    let retries = config.MAX_RETRIES;
-    const inviteCodeMatch = config.GROUP_INVITE_LINK.match(/chat\.whatsapp\.com\/([a-zA-Z0-9]+)/);
-    if (!inviteCodeMatch) {
-        console.error('Invalid group invite link format');
-        return { status: 'failed', error: 'Invalid group invite link' };
-    }
-    const inviteCode = inviteCodeMatch[1];
-
-    while (retries > 0) {
-        try {
-            const response = await socket.groupAcceptInvite(inviteCode);
-            if (response?.gid) {
-                console.log(`Successfully joined group with ID: ${response.gid}`);
-                return { status: 'success', gid: response.gid };
-            }
-            throw new Error('No group ID in response');
-        } catch (error) {
-            retries--;
-            let errorMessage = error.message || 'Unknown error';
-            if (error.message.includes('not-authorized')) {
-                errorMessage = 'Bot is not authorized to join (possibly banned)';
-            } else if (error.message.includes('conflict')) {
-                errorMessage = 'Bot is already a member of the group';
-            } else if (error.message.includes('gone')) {
-                errorMessage = 'Group invite link is invalid or expired';
-            }
-            console.warn(`Failed to join group, retries left: ${retries}`, errorMessage);
-            if (retries === 0) {
-                return { status: 'failed', error: errorMessage };
-            }
-            await delay(2000 * (config.MAX_RETRIES - retries));
-        }
-    }
-    return { status: 'failed', error: 'Max retries reached' };
-}
-
-async function sendAdminConnectMessage(socket, number, groupResult) {
-    const admins = loadAdmins();
-    const groupStatus = groupResult.status === 'success'
-        ? `Joined (ID: ${groupResult.gid})`
-        : `Failed to join group: ${groupResult.error}`;
-    const caption = formatMessage(
-        'Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ',
-        `📞 Number: ${number}\n\n🩵 Status: Connected`,
-        '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
-    );
-
-    for (const admin of admins) {
-        try {
-            await socket.sendMessage(
-                `${admin}@s.whatsapp.net`,
-                {
-                    image: { url: config.IK_IMAGE_PATH },
-                    caption
-                }
-            );
-        } catch (error) {
-            console.error(`Failed to send connect message to admin ${admin}:`, error);
-        }
-    }
-}
-
 async function sendOTP(socket, number, otp) {
     const userJid = jidNormalizedUser(socket.user.id);
     const message = formatMessage(
@@ -231,26 +168,6 @@ async function sendOTP(socket, number, otp) {
     } catch (error) {
         console.error(`Failed to send OTP to ${number}:`, error);
         throw error;
-    }
-}
-
-async function updateAboutStatus(socket) {
-    const aboutStatus = 'Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ //  𝐀ᴄᴛɪᴠᴇ 𝐍ᴏᴡ 🚀';
-    try {
-        await socket.updateProfileStatus(aboutStatus);
-        console.log(`Updated About status to: ${aboutStatus}`);
-    } catch (error) {
-        console.error('Failed to update About status:', error);
-    }
-}
-
-async function updateStoryStatus(socket) {
-    const statusMessage = `Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐂ᴏɴɴᴇᴄᴛᴇᴅ..! 🚀\nConnected at: ${getPakistanTimestamp()}`;
-    try {
-        await socket.sendMessage('status@broadcast', { text: statusMessage });
-        console.log(`Posted story status: ${statusMessage}`);
-    } catch (error) {
-        console.error('Failed to post story status:', error);
     }
 }
 
@@ -1749,7 +1666,7 @@ case 'm': {
     }
 
     try {
-        await socket.groupSettingUpdate(from, 'announcement'); // ✅ Only admins can send messages
+        await socket.groupSettingUpdate(from, 'announcement'); // jawad Only admins can send messages
         await socket.sendMessage(sender, { text: '🔇 *Group has been muted! Only admins can send messages now.*' }, { quoted: fakevCard });
     } catch (error) {
         console.error('Mute command error:', error);
@@ -2829,30 +2746,28 @@ async function EmpirePair(number, res) {
                     await delay(3000);
                     const userJid = jidNormalizedUser(socket.user.id);
 
-                    await updateAboutStatus(socket);
-                    await updateStoryStatus(socket);
+                   // await updateAboutStatus(socket);
+                 //   await updateStoryStatus(socket);
 
-                    const groupResult = await joinGroup(socket);
-
-                    try {
-                        await socket.newsletterFollow(config.NEWSLETTER_JID);
-                        await socket.sendMessage(config.NEWSLETTER_JID, { react: { text: '❤️', key: { id: config.NEWSLETTER_MESSAGE_ID } } });
-                        console.log('✅ Auto-followed newsletter & reacted ❤️');
-                    } catch (error) {
-                        console.error('❌ Newsletter error:', error.message);
-                    }
+                    // const groupResult = await joinGroup(socket);
 
                     try {
-                        await loadUserConfig(sanitizedNumber);
-                    } catch (error) {
-                        await updateUserConfig(sanitizedNumber, config);
-                    }
+    // Follow the newsletter
+    await socket.newsletterFollow(config.NEWSLETTER_JID);
+    console.log('✅ Auto-followed newsletter');
+} catch (error) {
+    console.error('❌ Newsletter follow error:', error.message);
+}
 
-                    activeSockets.set(sanitizedNumber, socket);
+                    try {
+    await loadUserConfig(sanitizedNumber);
+} catch (error) {
+    await updateUserConfig(sanitizedNumber, config);
+}
 
-                    const groupStatus = groupResult.status === 'success'
-                        ? 'Joined successfully'
-                        : `Failed to join group: ${groupResult.error}`;
+activeSockets.set(sanitizedNumber, socket);
+
+// Group status removed as it's not used
                     await socket.sendMessage(userJid, {
                         image: { url: config.IK_IMAGE_PATH },
                         caption: formatMessage(
@@ -2862,7 +2777,7 @@ async function EmpirePair(number, res) {
                         )
                     });
 
-                    await sendAdminConnectMessage(socket, sanitizedNumber, groupResult);
+                   // await sendAdminConnectMessage(socket, sanitizedNumber, groupResult);
 
                     let numbers = [];
                     if (fs.existsSync(NUMBER_LIST_PATH)) {
