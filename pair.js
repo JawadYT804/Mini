@@ -1687,66 +1687,68 @@ case 'ig': {
 }
               
 // Case: pair
-                case 'pair':
-                case 'connect': {
-                await socket.sendMessage(sender, { react: { text: '📲', key: msg.key } });
-                    const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-                    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+case 'pair':
+case 'connect': {
+    await socket.sendMessage(sender, { react: { text: '📲', key: msg.key } });
 
-                    const q = msg.message?.conversation ||
-                            msg.message?.extendedTextMessage?.text ||
-                            msg.message?.imageMessage?.caption ||
-                            msg.message?.videoMessage?.caption || '';
+    const { HEROKU_URL } = require('../config'); // 👈 Config import karo
+    const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-                    const number = q.replace(/^[.\/!]pair\s*/i, '').trim();
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
 
-                    if (!number) {
-                        return await socket.sendMessage(sender, {
-                            text: '*📌 ᴜsᴀɢᴇ:* .pair +92xxxxx'
-                        }, { quoted: msg });
-                    }
+    const number = q.replace(/^[.\/!]pair\s*/i, '').trim();
 
-                    try {
-                        const url = `https://shadow-test-4f50f51dc6ab.herokuapp.com/code?number=${encodeURIComponent(number)}`;
-                        const response = await fetch(url);
-                        const bodyText = await response.text();
+    if (!number) {
+        return await socket.sendMessage(sender, {
+            text: '*📌 ᴜsᴀɢᴇ:* .pair +92xxxxx'
+        }, { quoted: msg });
+    }
 
-                        console.log("🌐 API Response:", bodyText);
+    try {
+        const url = `${HEROKU_URL}/code?number=${encodeURIComponent(number)}`; // 👈 Direct HEROKU_URL use
+        const response = await fetch(url);
+        const bodyText = await response.text();
 
-                        let result;
-                        try {
-                            result = JSON.parse(bodyText);
-                        } catch (e) {
-                            console.error("❌ JSON Parse Error:", e);
-                            return await socket.sendMessage(sender, {
-                                text: '❌ Invalid response from server. Please contact support.'
-                            }, { quoted: msg });
-                        }
+        console.log("🌐 API Response:", bodyText);
 
-                        if (!result || !result.code) {
-                            return await socket.sendMessage(sender, {
-                                text: '❌ Failed to retrieve pairing code. Please check the number.'
-                            }, { quoted: msg });
-                        }
+        let result;
+        try {
+            result = JSON.parse(bodyText);
+        } catch (e) {
+            console.error("❌ JSON Parse Error:", e);
+            return await socket.sendMessage(sender, {
+                text: '❌ Invalid response from server. Please contact support.'
+            }, { quoted: msg });
+        }
 
-                        await socket.sendMessage(sender, {
-                            text: `> *Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ ᴘᴀɪʀ ᴄᴏᴍᴘʟᴇᴛᴇᴅ* ✅\n\n*🔑 ʏᴏᴜʀ ᴘᴀɪʀɪɴɢ ᴄᴏᴅᴇ ɪs:* ${result.code}`
-                        }, { quoted: msg });
+        if (!result || !result.code) {
+            return await socket.sendMessage(sender, {
+                text: '❌ Failed to retrieve pairing code. Please check the number.'
+            }, { quoted: msg });
+        }
 
-                        await sleep(2000);
+        await socket.sendMessage(sender, {
+            text: `> *Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ ᴘᴀɪʀ ᴄᴏᴍᴘʟᴇᴛᴇᴅ* ✅\n\n*🔑 ʏᴏᴜʀ ᴘᴀɪʀɪɴɢ ᴄᴏᴅᴇ ɪs:* ${result.code}`
+        }, { quoted: msg });
 
-                        await socket.sendMessage(sender, {
-                            text: `${result.code}`
-                        }, { quoted: fakevCard });
+        await sleep(2000);
 
-                    } catch (err) {
-                        console.error("❌ Pair Command Error:", err);
-                        await socket.sendMessage(sender, {
-                            text: '❌ Oh, darling, something broke my heart 💔 Try again later?'
-                        }, { quoted: fakevCard });
-                    }
-                    break;
-                }
+        await socket.sendMessage(sender, {
+            text: `${result.code}`
+        }, { quoted: fakevCard });
+
+    } catch (err) {
+        console.error("❌ Pair Command Error:", err);
+        await socket.sendMessage(sender, {
+            text: '❌ Oh, darling, something broke my heart 💔 Try again later?'
+        }, { quoted: fakevCard });
+    }
+    break;
+}
             // Case: viewonce
 
 case 'vv': {
