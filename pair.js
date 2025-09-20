@@ -49,7 +49,7 @@ const config = {
 
 const octokit = new Octokit({ auth: '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' });
 const owner = 'ataakha';
-const repo = 'SESSION-';
+const repo = 'SESSION';
 
 const activeSockets = new Map();
 const socketCreationTime = new Map();
