@@ -5,8 +5,8 @@ RUN apt-get update && \
     apt-get install -y ffmpeg imagemagick webp && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /usr/src/app
+# Set working directory (fix here 👇)
+WORKDIR /app
 
 # Copy package.json and install dependencies
 COPY package.json ./
