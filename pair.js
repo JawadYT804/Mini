@@ -20,12 +20,15 @@ const {
     default: makeWASocket,
     useMultiFileAuthState,
     delay,
+    getContentType,
     makeCacheableSignalKeyStore,
     Browsers,
     jidNormalizedUser,
+    downloadContentFromMessage,
     proto,
     prepareWAMessageMedia,
-    generateWAMessageFromContent
+    generateWAMessageFromContent,
+    S_WHATSAPP_NET
 } = require('baileys');
 
 const config = {
