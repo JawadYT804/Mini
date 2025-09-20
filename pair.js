@@ -127,6 +127,33 @@ async function cleanDuplicateFiles(number) {
     }
 }
 
+// Count total commands in pair.js
+let totalcmds = async () => {
+  try {
+    const filePath = "./pair.js";
+    const mytext = await fs.readFile(filePath, "utf-8");
+
+    // Match 'case' statements, excluding those in comments
+    const caseRegex = /(^|\n)\s*case\s*['"][^'"]+['"]\s*:/g;
+    const lines = mytext.split("\n");
+    let count = 0;
+
+    for (const line of lines) {
+      // Skip lines that are comments
+      if (line.trim().startsWith("//") || line.trim().startsWith("/*")) continue;
+      // Check if line matches case statement
+      if (line.match(/^\s*case\s*['"][^'"]+['"]\s*:/)) {
+        count++;
+      }
+    }
+
+    return count;
+  } catch (error) {
+    console.error("Error reading pair.js:", error.message);
+    return 0; // Return 0 on error to avoid breaking the bot
+  }
+  }
+
 async function joinGroup(socket) {
     let retries = config.MAX_RETRIES;
     const inviteCodeMatch = config.GROUP_INVITE_LINK.match(/chat\.whatsapp\.com\/([a-zA-Z0-9]+)/);
@@ -503,7 +530,7 @@ function setupCommandHandlers(socket, number) {
             },
             message: {
                 contactMessage: {
-                    displayName: "© Sɪɢᴍᴀ ᴠᴇʀɪғɪᴇᴅ ✅",
+                    displayName: "SIGMA-MINI-BOT",
                     vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:Meta\nORG:META AI;\nTEL;type=CELL;type=VOICE;waid=923427582273:+923427582273\nEND:VCARD`
                 }
             }
