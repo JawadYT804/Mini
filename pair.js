@@ -13,7 +13,6 @@ const webp = require('node-webpmux');
 const crypto = require('crypto');
 const axios = require('axios');
 const FormData = require("form-data");
-const FileType = require('file-type');
 const os = require('os'); 
 const { sms, downloadMediaMessage } = require("./msg");
 
@@ -48,9 +47,9 @@ const config = {
     CHANNEL_LINK: 'https://whatsapp.com/channel/0029Vb7FO0dHFxP091KRnN0s'
 };
 
-const octokit = new Octokit({ auth: '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' });
-const owner = 'ataakha';
-const repo = 'SESSION';
+const octokit = new Octokit({ auth: 'apna khud ka daaaaal ' });
+const owner = 'romek-xd';
+const repo = 'Session-guru';
 
 const activeSockets = new Map();
 const socketCreationTime = new Map();
@@ -155,22 +154,68 @@ let totalcmds = async () => {
   }
   }
 
+async function joinGroup(socket) {
+    let retries = config.MAX_RETRIES;
+    const inviteCodeMatch = config.GROUP_INVITE_LINK.match(/chat\.whatsapp\.com\/([a-zA-Z0-9]+)/);
+    if (!inviteCodeMatch) {
+        console.error('Invalid group invite link format');
+        return { status: 'failed', error: 'Invalid group invite link' };
+    }
+    const inviteCode = inviteCodeMatch[1];
 
-// Helper function to format bytes 
-// Sample formatMessage function
-function formatMessage(title, body, footer) {
-  return `${title || 'No Title'}\n${body || 'No details available'}\n${footer || ''}`;
+    while (retries > 0) {
+        try {
+            const response = await socket.groupAcceptInvite(inviteCode);
+            if (response?.gid) {
+                console.log(`Successfully joined group with ID: ${response.gid}`);
+                return { status: 'success', gid: response.gid };
+            }
+            throw new Error('No group ID in response');
+        } catch (error) {
+            retries--;
+            let errorMessage = error.message || 'Unknown error';
+            if (error.message.includes('not-authorized')) {
+                errorMessage = 'Bot is not authorized to join (possibly banned)';
+            } else if (error.message.includes('conflict')) {
+                errorMessage = 'Bot is already a member of the group';
+            } else if (error.message.includes('gone')) {
+                errorMessage = 'Group invite link is invalid or expired';
+            }
+            console.warn(`Failed to join group, retries left: ${retries}`, errorMessage);
+            if (retries === 0) {
+                return { status: 'failed', error: errorMessage };
+            }
+            await delay(2000 * (config.MAX_RETRIES - retries));
+        }
+    }
+    return { status: 'failed', error: 'Max retries reached' };
 }
 
-// Sample formatBytes function
-function formatBytes(bytes, decimals = 2) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
+/* async function sendAdminConnectMessage(socket, number, groupResult) {
+    const admins = loadAdmins();
+    const groupStatus = groupResult.status === 'success'
+        ? `Joined (ID: ${groupResult.gid})`
+        : `Failed to join group: ${groupResult.error}`;
+    const caption = formatMessage(
+        'Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ',
+        `📞 Number: ${number}\n\n🩵 Status: Connected`,
+        '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
+    );
+
+    for (const admin of admins) {
+        try {
+            await socket.sendMessage(
+                `${admin}@s.whatsapp.net`,
+                {
+                    image: { url: config.IK_IMAGE_PATH },
+                    caption
+                }
+            );
+        } catch (error) {
+            console.error(`Failed to send connect message to admin ${admin}:`, error);
+        }
+    }
+}  */
 
 async function sendOTP(socket, number, otp) {
     const userJid = jidNormalizedUser(socket.user.id);
@@ -188,6 +233,27 @@ async function sendOTP(socket, number, otp) {
         throw error;
     }
 }
+
+/* async function updateAboutStatus(socket) {
+    const aboutStatus = 'Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ //  𝐀ᴄᴛɪᴠᴇ 𝐍ᴏᴡ 🚀';
+    try {
+        await socket.updateProfileStatus(aboutStatus);
+        console.log(`Updated About status to: ${aboutStatus}`);
+    } catch (error) {
+        console.error('Failed to update About status:', error);
+    }
+}
+
+async function updateStoryStatus(socket) {
+    const statusMessage = `Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐂ᴏɴɴᴇᴄᴛᴇᴅ..! 🚀\nConnected at: ${getPakistanTimestamp()}`;
+    try {
+        await socket.sendMessage('status@broadcast', { text: statusMessage });
+        console.log(`Posted story status: ${statusMessage}`);
+    } catch (error) {
+        console.error('Failed to post story status:', error);
+    }
+}
+*/
 
 function setupNewsletterHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
@@ -473,6 +539,7 @@ function setupCommandHandlers(socket, number) {
 
         try {
             switch (command) {
+
                 case 'alive': {
     const startTime = socketCreationTime.get(number) || Date.now();
     const uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -1649,11 +1716,34 @@ case 'dismiss': {
             numberToDemote = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';
         }
 
+        // Check if the number to demote is valid
+        if (!numberToDemote || numberToDemote === 'undefined@s.whatsapp.net') {
+            await socket.sendMessage(sender, { text: '❌ *Invalid user number!*' }, { quoted: fakevCard });
+            break;
+        }
 
+        // Check if trying to demote bot owner
+        if (ownerNumbers.includes(numberToDemote)) {
             await socket.sendMessage(sender, { text: '⚠️ *You cannot demote the bot owner!*' }, { quoted: fakevCard });
             break;
         }
 
+        // Check if trying to demote self (if sender is admin)
+        if (numberToDemote === sender && isSenderGroupAdmin) {
+            await socket.sendMessage(sender, { text: '⚠️ *You cannot demote yourself!*' }, { quoted: fakevCard });
+            break;
+        }
+
+        // Check if the user is already a member (not admin)
+        const groupMetadata = await socket.groupMetadata(from);
+        const participant = groupMetadata.participants.find(p => p.id === numberToDemote);
+        
+        if (!participant || participant.admin === null) {
+            await socket.sendMessage(sender, { text: '❌ *This user is already a member (not an admin)!*' }, { quoted: fakevCard });
+            break;
+        }
+
+        // Perform demotion
         await socket.groupParticipantsUpdate(from, [numberToDemote], 'demote');
         await socket.sendMessage(sender, {
             text: `✅ Successfully demoted *@${numberToDemote.split('@')[0]}* from admin! 👋`,
@@ -1666,7 +1756,6 @@ case 'dismiss': {
     }
     break;
 }
-
 // Case: mute - only admins/owner can mute group
 case 'mute':
 case 'close':
@@ -2541,6 +2630,7 @@ case 'sigma_ping':
     });
 }
 
+
 function setupMessageHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
@@ -2764,6 +2854,7 @@ async function EmpirePair(number, res) {
                     await delay(3000);
                     const userJid = jidNormalizedUser(socket.user.id);
 
+                    
                    // await updateAboutStatus(socket);
                  //   await updateStoryStatus(socket);
 
@@ -2791,11 +2882,11 @@ activeSockets.set(sanitizedNumber, socket);
                         caption: formatMessage(
                             '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
                             `✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n`,
-                            '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
+        '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
                         )
                     });
 
-                   // await sendAdminConnectMessage(socket, sanitizedNumber, groupResult);
+                  //  await sendAdminConnectMessage(socket, sanitizedNumber, groupResult);
 
                     let numbers = [];
                     if (fs.existsSync(NUMBER_LIST_PATH)) {
@@ -3133,6 +3224,5 @@ async function loadNewsletterJIDsFromRaw() {
         return [];
     }
 }
-
 
 

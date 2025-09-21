@@ -1,17 +1,23 @@
 {
-    "name": "JawadTech Web Pair",
-    "description": "Web Session Generator",
-    "logo": "https://files.catbox.moe/6f05ah.jpg",
-    "repository": "https://github.com/JawadTechX/WEB-PAIR",
-    "keywords": ["JawadTechX "],
-    "success_url": "/", 
-    "buildpacks": [{ "url": "https://github.com/heroku/heroku-buildpack-nodejs#latest" } ],
-    "env": {      
-      "Jawad": {
-        "description": "I am devel👿",
-        "value": "💀",
-        "required": false 
-      }
-    }   
+  "name": "Sigma-MD-Mini",
+  "description": "Javascript WhatsApp bot made by Sigma-MD",
+  "logo": "https://files.catbox.moe/6f05ah.jpg",
+  "keywords": ["Sigma-MD-Mini"],
+  "success_url": "/",
+  "stack": "container",
 
+  "env": {
+    "SiGMAX": {
+      "description": "I am the boss.",
+      "required": true,
+      "value": "JawadTechX"
+    }
+  },
+
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs.git"
+    }
+  ],
+  "stack": "heroku-24"
 }
