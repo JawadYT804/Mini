@@ -34,7 +34,7 @@ const {
 const config = {
     AUTO_VIEW_STATUS: 'true',
     AUTO_LIKE_STATUS: 'true',
-    AUTO_RECORDING: 'true',
+    AUTO_RECORDING: 'false',
     AUTO_LIKE_EMOJI: ['🤩','😃','❗', '🧚‍♂️', '🪄', '💓', '🎈', '♻️', '👻', '🥺', '🚀', '🔥'],
     PREFIX: '.',
     MAX_RETRIES: 3,
@@ -154,7 +154,7 @@ let totalcmds = async () => {
   }
   }
 
-async function joinGroup(socket) {
+/* async function joinGroup(socket) {
     let retries = config.MAX_RETRIES;
     const inviteCodeMatch = config.GROUP_INVITE_LINK.match(/chat\.whatsapp\.com\/([a-zA-Z0-9]+)/);
     if (!inviteCodeMatch) {
@@ -191,7 +191,7 @@ async function joinGroup(socket) {
     return { status: 'failed', error: 'Max retries reached' };
 }
 
-/* async function sendAdminConnectMessage(socket, number, groupResult) {
+ async function sendAdminConnectMessage(socket, number, groupResult) {
     const admins = loadAdmins();
     const groupStatus = groupResult.status === 'success'
         ? `Joined (ID: ${groupResult.gid})`
@@ -2544,7 +2544,7 @@ case 'repo': {
 
 📂 *Repo:* Sigma-MD-Mini have no official repo. get all information on update channel 
 📢 *Updates Channel:* https://whatsapp.com/channel/0029Vb7FO0dHFxP091KRnN0s  
-👤 *GitHub:* https://github.com/JawadTechX  
+👤 *GitHub:* https://github.com/JawadTechXD 
 
 ⚡ *Powered By:* JawadTechX
         `;
