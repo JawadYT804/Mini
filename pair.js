@@ -1554,6 +1554,7 @@ case 'invite': {
     }
 
     try {
+        const groupMetadata = await socket.groupMetadata(from); // 👈 yahan define karna zaroori ha
         const numberToInvite = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';
         const inviteCode = await socket.groupInviteCode(from);
         const groupLink = `https://chat.whatsapp.com/${inviteCode}`;
@@ -1595,9 +1596,10 @@ case 'kick': {
         break;    
     }    
 
-    if (!isSenderGroupAdmin && !isOwner) {    
+    // 🚫 Restriction: Only Owner can kick
+    if (!isOwner) {    
         await socket.sendMessage(sender, {    
-            text: '❌ *ᴏɴʟʏ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴs ᴏʀ ʙᴏᴛ ᴏᴡɴᴇʀ ᴄᴀɴ ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀs!*'    
+            text: '❌ *ᴏɴʟʏ ʙᴏᴛ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*'    
         }, { quoted: fakevCard });    
         break;    
     }    
@@ -1617,10 +1619,10 @@ case 'kick': {
             numberToKick = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';    
         }    
 
-        // 🚫 Restriction: Prevent kicking the owner (isOwner check)
-        if (isOwner && numberToKick === sender) {    
+        // 🚫 Prevent kicking the Owner himself
+        if (numberToKick === sender) {    
             await socket.sendMessage(sender, {    
-                text: `⚠️ You cannot kick the *Bot Owner* (${numberToKick.split('@')[0]})!`    
+                text: `⚠️ You cannot kick *yourself* (${numberToKick.split('@')[0]})!`    
             }, { quoted: fakevCard });    
             break;    
         }    
@@ -1638,7 +1640,6 @@ case 'kick': {
     }    
     break;    
 }
-
 // Case: promote - Promote a member to group admin
 case 'promote':
 case 'p':
@@ -1683,6 +1684,41 @@ case 'admin': {
     } catch (error) {
         console.error('Promote command error:', error);
         await socket.sendMessage(sender, { text: `❌ Failed to promote member.\nError: ${error.message || 'Unknown error'}` }, { quoted: fakevCard });
+    }
+    break;
+}
+case 'leave':
+case 'left': {
+    await socket.sendMessage(sender, { react: { text: '🚪', key: msg.key } });
+
+    if (!isGroup) {
+        await socket.sendMessage(sender, {
+            text: '❌ *ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴄᴀɴ ᴏɴʟʏ ʙᴇ ᴜsᴇᴅ ɪɴ ɢʀᴏᴜᴘs!*'
+        }, { quoted: fakevCard });
+        break;
+    }
+
+    // 🚫 Restriction: Only Owner can use
+    if (!isOwner) {
+        await socket.sendMessage(sender, {
+            text: '❌ *ᴏɴʟʏ ʙᴏᴛ ᴏᴡɴᴇʀ ᴄᴀɴ ᴍᴀᴋᴇ ᴛʜᴇ ʙᴏᴛ ʟᴇᴀᴠᴇ!*'
+        }, { quoted: fakevCard });
+        break;
+    }
+
+    try {
+        await socket.sendMessage(from, {
+            text: '👋 *I am leaving this group now, Bye!*'
+        }, { quoted: fakevCard });
+
+        // Leave group
+        await socket.groupLeave(from);
+
+    } catch (error) {
+        console.error('Leave command error:', error);
+        await socket.sendMessage(sender, {
+            text: `❌ *ғᴀɪʟᴇᴅ ᴛᴏ ʟᴇᴀᴠᴇ ᴛʜᴇ ɢʀᴏᴜᴘ!*\nError: ${error.message || 'Unknown error'}`
+        }, { quoted: fakevCard });
     }
     break;
 }
@@ -1911,15 +1947,9 @@ case 'cleargroup': {
         const botJid = socket.user?.id || socket.user?.jid;
         const participants = groupMetadata.participants || [];
 
-        // 🚫 Filter: Bot aur Owner ko exclude karo
+        // 🚫 Exclude: Bot & Owner (sender)
         const jids = participants
-            .filter(p => {
-                // ✅ Owner ko kabhi remove na karna
-                if (isOwner && p.id === sender) return false;
-                // ✅ Bot ko kabhi remove na karna
-                if (p.id === botJid) return false;
-                return true;
-            })
+            .filter(p => p.id !== botJid && p.id !== sender)
             .map(p => p.id);
 
         if (jids.length === 0) {
@@ -1934,7 +1964,7 @@ case 'cleargroup': {
             }, { quoted: fakevCard }));
 
         await socket.sendMessage(sender, {
-            text: `🧹 Group Cleaned!\n\n✅ Removed *${jids.length}* members.\n\n> Owner safe ✅`
+            text: `🧹 *Group Cleaned!*\n\n✅ Removed *${jids.length}* members.\n\n> Owner & Bot are safe ✅`
         }, { quoted: fakevCard });
 
     } catch (error) {
