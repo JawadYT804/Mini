@@ -1203,66 +1203,7 @@ case 'gpt': {
 
     break;
 }
-                    case 'pronhub': {          
-    const q = msg.message?.conversation || 
-              msg.message?.extendedTextMessage?.text || 
-              msg.message?.imageMessage?.caption || 
-              msg.message?.videoMessage?.caption || '';      
 
-    if (!q || q.trim() === '') {         
-        return await socket.sendMessage(sender, { text: '*Need query for search pronhub*' });     
-    }      
-
-    try {         
-       
-        const { data } = await axios.get(`https://phdl-api-thenux.netlify.app/api/search?q=${encodeURIComponent(q)}`);
-        const results = data.results;
-
-        if (!results || results.length === 0) {             
-            return await socket.sendMessage(sender, { text: '*No results found*' });         
-        }          
-
-        const first = results[0];
-        const url = first.url;
-        const dina = first.title;
-        const image = first.thumbnail;
-
-        const desc = `🎬 Title - ${dina}\n🏷️ URL - ${url}\n\n© ᴘᴏᴡᴇʀᴇᴅ ʙʏ JᴀᴡᴀᴅTᴇᴄʜX`;         
-
-        await socket.sendMessage(sender, {             
-            image: { url: image },             
-            caption: desc,         
-        }, { quoted: msg });          
-
-        await socket.sendMessage(sender, { react: { text: '⬇️', key: msg.key } });          
-
-        
-        const { data: down } = await axios.get(`https://phdl-api-thenux.netlify.app/api/download?url=${encodeURIComponent(url)}`);
-        const videos = down.videoInfo?.data?.videos;          
-
-        if (!videos || videos.length === 0) {
-            return await socket.sendMessage(sender, { text: "*Download link not found*" });
-        }
-
- 
-        const bestLink = videos[0].url;
-        const quality = videos[0].quality;
-
-        await socket.sendMessage(sender, { react: { text: '⬆️', key: msg.key } });          
-
-        await socket.sendMessage(sender, {             
-            video: { url: bestLink },             
-            mimetype: "video/mp4",             
-            caption: `${dina} (📹 ${quality})`        
-        }, { quoted: msg });      
-
-    } catch (err) {         
-        console.error("Pronhub Plugin Error:", err);         
-        await socket.sendMessage(sender, { text: "*Error fetching data*" });     
-    }      
-
-    break; 		
-                    }
                  case 'now':
                     await socket.sendMessage(sender, {
                         image: { url: config.IK_IMAGE_PATH },
@@ -2374,10 +2315,10 @@ case 'stake': {
     }
 
     try {
-        let mime = msg.quoted.type; // Using .type from msg.js
+        let mime = msg.quoted.type;
         let pack = args.join(" ");
 
-        if (mime === "imageMessage" || mime === "stickerMessage") {
+        if (mime === "imageMessage" || mime === "stickerMessage" || mime === "videoMessage") {
             let media = await msg.quoted.download();
             let sticker = new Sticker(media, {
                 pack: pack,
@@ -2391,7 +2332,7 @@ case 'stake': {
             await socket.sendMessage(from, { sticker: buffer }, { quoted: msg });
         } else {
             return await socket.sendMessage(from, {
-                text: "*❌ ᴜʜʜ, ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ.*"
+                text: "*❌ ᴜʜʜ, ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ, ᴠɪᴅᴇᴏ, ᴏʀ sᴛɪᴄᴋᴇʀ.*"
             }, { quoted: fakevCard });
         }
     } catch (e) {
@@ -2416,7 +2357,7 @@ case 'stickergif': {
     }
 
     try {
-        let mime = msg.quoted.type; // Using .type from msg.js
+        let mime = msg.quoted.type;
         let pack = "Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ";
 
         // Check for supported media types
@@ -2434,130 +2375,16 @@ case 'stickergif': {
             await socket.sendMessage(from, { sticker: buffer }, { quoted: msg });
         } else {
             return await socket.sendMessage(from, {
-                text: `*❌ ᴜɴsᴜᴘᴘᴏʀᴛᴇᴅ ᴍᴇᴅɪᴀ ᴛʏᴘᴇ: ${mime}. ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ ᴏʀ ᴠɪᴅᴇᴏ.*`
+                text: `*❌ ᴜɴsᴜᴘᴘᴏʀᴛᴇᴅ ᴍᴇᴅɪᴀ ᴛʏᴘᴇ: ${mime}. ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ, ᴠɪᴅᴇᴏ, ᴏʀ sᴛɪᴄᴋᴇʀ.*`
             }, { quoted: fakevCard });
         }
     } catch (e) {
         console.error("❌ Sticker error:", e);
         await socket.sendMessage(from, {
-            text: "❌ Failed to create sticker. Please try again with a different image."
+            text: "❌ Failed to create sticker. Please try again with a different media."
         }, { quoted: fakevCard });
     }
     break;
-}
-
-// ===============================
-// 📌 Case url
-// ===============================
-case 'url': {
-  try {
-    await socket.sendMessage(sender, { react: { text: '📤', key: msg.key || {} } });
-
-    const quoted = msg.quoted || msg;
-    
-    // Extract mime type from quoted message using msg.js structure
-    let mime = '';
-    if (quoted.msg && quoted.msg.mimetype) {
-        mime = quoted.msg.mimetype;
-    } else if (quoted.type) {
-        const mimeMap = {
-            imageMessage: 'image/jpeg',
-            videoMessage: 'video/mp4',
-            audioMessage: 'audio/mpeg',
-            documentMessage: 'application/octet-stream',
-            stickerMessage: 'image/webp'
-        };
-        mime = mimeMap[quoted.type] || '';
-    }
-
-    console.log('MIME Type:', mime);
-
-    if (!mime || !['image', 'video', 'audio', 'application'].some(type => mime.includes(type))) {
-      await socket.sendMessage(sender, {
-        text: `❌ *ʀᴇᴘʟʏ ᴛᴏ ɪᴍᴀɢᴇ, ᴀᴜᴅɪᴏ, ᴏʀ ᴠɪᴅᴇᴏ!*\n` +
-              `Detected type: ${mime || 'none'}`
-      }, { quoted: msg });
-      break;
-    }
-
-    await socket.sendMessage(sender, {
-      text: `⏳ *ᴜᴘʟᴏᴀᴅɪɴɢ ғɪʟᴇ...*`
-    }, { quoted: msg });
-
-    const buffer = await quoted.download(); // Using download() method from msg.js
-    if (!buffer || buffer.length === 0) {
-      throw new Error('Failed to download media: Empty buffer');
-    }
-
-    // Determine file extension
-    const ext = mime.includes('image/jpeg') ? '.jpg' :
-                mime.includes('image/png') ? '.png' :
-                mime.includes('image/gif') ? '.gif' :
-                mime.includes('image/webp') ? '.webp' :
-                mime.includes('video') ? '.mp4' :
-                mime.includes('audio') ? '.mp3' : '.bin';
-    
-    const name = `file_${Date.now()}${ext}`;
-    const tmp = path.join(os.tmpdir(), name);
-    
-    // Ensure the tmp directory exists
-    if (!fs.existsSync(os.tmpdir())) {
-      fs.mkdirSync(os.tmpdir(), { recursive: true });
-    }
-    
-    fs.writeFileSync(tmp, buffer);
-    console.log('Saved file to:', tmp);
-
-    const form = new FormData();
-    form.append('fileToUpload', fs.createReadStream(tmp), name);
-    form.append('reqtype', 'fileupload');
-
-    const res = await axios.post('https://catbox.moe/user/api.php', form, {
-      headers: form.getHeaders(),
-      timeout: 30000 // 30 second timeout
-    });
-
-    // Clean up temporary file
-    if (fs.existsSync(tmp)) {
-      fs.unlinkSync(tmp);
-    }
-
-    if (!res.data || res.data.includes('error')) {
-      throw new Error(`Upload failed: ${res.data || 'No response data'}`);
-    }
-
-    const type = mime.includes('image') ? 'ɪᴍᴀɢᴇ' :
-                 mime.includes('video') ? 'ᴠɪᴅᴇᴏ' :
-                 mime.includes('audio') ? 'ᴀᴜᴅɪᴏ' : 'ғɪʟᴇ';
-
-    await socket.sendMessage(sender, {
-      text: `✅ *${type} ᴜᴘʟᴏᴀᴅᴇᴅ!*\n\n` +
-            `📁 *sɪᴢᴇ:* ${formatBytes(buffer.length)}\n` +
-            `🔗 *ᴜʀʟ:* ${res.data}\n\n` +
-            `© ᴘᴏᴡᴇʀᴇᴅ ʙʏ Jᴀᴡᴀᴅ Tᴇᴄʜ`
-    }, { quoted: msg });
-
-    await socket.sendMessage(sender, { react: { text: '✅', key: msg.key || {} } });
-  } catch (error) {
-    console.error('tourl2 error:', error.message, error.stack);
-    
-    // Clean up temporary file if it exists
-    if (tmp && fs.existsSync(tmp)) {
-      try {
-        fs.unlinkSync(tmp);
-      } catch (e) {
-        console.error('Error cleaning up temp file:', e.message);
-      }
-    }
-    
-    await socket.sendMessage(sender, {
-      text: `❌ *ᴄᴏᴜʟᴅɴ'ᴛ ᴜᴘʟᴏᴀᴅ ᴛʜᴀᴛ ғɪʟᴇ! 😢*\n` +
-            `ᴇʀʀᴏʀ: ${error.message || 'sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ'}\n` +
-            `💡 *ᴛʀʏ ᴀɢᴀɪɴ, ᴅᴀʀʟɪɴɢ?*`
-    }, { quoted: msg });
-    await socket.sendMessage(sender, { react: { text: '❌', key: msg.key || {} } });
-  }
-  break;
 }
 
 // ===============================
@@ -2571,22 +2398,16 @@ case 'vv': {
         break;
     }
 
-    // vérifier si reply
+    // Check if reply
     if (!msg.quoted) {
-        await socket.sendMessage(from, { text: "*🍁 ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴠɪᴇᴡ-ᴏɴᴄᴇ ᴍᴇssᴀɢᴇ!*" }, { quoted: fakevCard });
+        await socket.sendMessage(from, { text: "*🍁 ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇssᴀɢᴇ!*" }, { quoted: fakevCard });
         break;
     }
 
     try {
         let q = msg.quoted;
-        // Check if it's a viewOnce message using msg.js structure
-        if (msg.type !== 'viewOnceMessage' && q.type !== 'viewOnceMessage') {
-            await socket.sendMessage(from, { text: "❌ ᴛʜɪs ɪsɴ'ᴛ ᴀ ᴠɪᴇᴡ-ᴏɴᴄᴇ ᴍᴇssᴀɢᴇ!" }, { quoted: fakevCard });
-            break;
-        }
-
         let buffer = await q.download();
-        let mtype = q.type; // Using .type from msg.js
+        let mtype = q.type;
         let options = { quoted: msg };
 
         let content = {};
@@ -2605,7 +2426,110 @@ case 'vv': {
 
     } catch (e) {
         console.error("VV Error:", e);
-        await socket.sendMessage(from, { text: "❌ Error fetching view-once message:\n" + e.message }, { quoted: fakevCard });
+        await socket.sendMessage(from, { text: "❌ Error fetching message:\n" + e.message }, { quoted: fakevCard });
+    }
+    break;
+}
+
+// ===============================
+// 📌 Case url
+// ===============================
+case 'url': {
+    await socket.sendMessage(sender, { react: { text: '📤', key: msg.key } });
+
+    try {
+        if (!msg.quoted) {
+            return await socket.sendMessage(from, {
+                text: "*🍁 ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇssᴀɢᴇ!*"
+            }, { quoted: fakevCard });
+        }
+
+        const buffer = await msg.quoted.download();
+        const mtype = msg.quoted.type;
+        
+        if (!['imageMessage', 'videoMessage', 'audioMessage'].includes(mtype)) {
+            return await socket.sendMessage(from, {
+                text: "❌ ᴏɴʟʏ ɪᴍᴀɢᴇ, ᴠɪᴅᴇᴏ, ᴀɴᴅ ᴀᴜᴅɪᴏ ᴍᴇssᴀɢᴇs ᴀʀᴇ sᴜᴘᴘᴏʀᴛᴇᴅ"
+            }, { quoted: fakevCard });
+        }
+
+        await socket.sendMessage(sender, {
+            text: `⏳ *ᴜᴘʟᴏᴀᴅɪɴɢ ғɪʟᴇ...*`
+        }, { quoted: msg });
+
+        // Determine file extension and type
+        let ext, type;
+        switch (mtype) {
+            case "imageMessage":
+                ext = '.jpg';
+                type = 'ɪᴍᴀɢᴇ';
+                break;
+            case "videoMessage":
+                ext = '.mp4';
+                type = 'ᴠɪᴅᴇᴏ';
+                break;
+            case "audioMessage":
+                ext = '.mp3';
+                type = 'ᴀᴜᴅɪᴏ';
+                break;
+        }
+
+        const name = `file_${Date.now()}${ext}`;
+        const tmp = path.join(os.tmpdir(), name);
+        
+        // Ensure the tmp directory exists
+        if (!fs.existsSync(os.tmpdir())) {
+            fs.mkdirSync(os.tmpdir(), { recursive: true });
+        }
+        
+        fs.writeFileSync(tmp, buffer);
+        console.log('Saved file to:', tmp);
+
+        const form = new FormData();
+        form.append('fileToUpload', fs.createReadStream(tmp), name);
+        form.append('reqtype', 'fileupload');
+
+        const res = await axios.post('https://catbox.moe/user/api.php', form, {
+            headers: form.getHeaders(),
+            timeout: 30000
+        });
+
+        // Clean up temporary file
+        if (fs.existsSync(tmp)) {
+            fs.unlinkSync(tmp);
+        }
+
+        if (!res.data || res.data.includes('error')) {
+            throw new Error(`Upload failed: ${res.data || 'No response data'}`);
+        }
+
+        await socket.sendMessage(sender, {
+            text: `✅ *${type} ᴜᴘʟᴏᴀᴅᴇᴅ!*\n\n` +
+                  `📁 *sɪᴢᴇ:* ${formatBytes(buffer.length)}\n` +
+                  `🔗 *ᴜʀʟ:* ${res.data}\n\n` +
+                  `© ᴘᴏᴡᴇʀᴇᴅ ʙʏ Jᴀᴡᴀᴅ Tᴇᴄʜ`
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
+    } catch (error) {
+        console.error('URL upload error:', error.message, error.stack);
+        
+        // Clean up temporary file if it exists
+        if (tmp && fs.existsSync(tmp)) {
+            try {
+                fs.unlinkSync(tmp);
+            } catch (e) {
+                console.error('Error cleaning up temp file:', e.message);
+            }
+        }
+        
+        await socket.sendMessage(sender, {
+            text: `❌ *ᴄᴏᴜʟᴅɴ'ᴛ ᴜᴘʟᴏᴀᴅ ᴛʜᴀᴛ ғɪʟᴇ! 😢*\n` +
+                  `ᴇʀʀᴏʀ: ${error.message || 'sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ'}\n` +
+                  `💡 *ᴛʀʏ ᴀɢᴀɪɴ, ᴅᴀʀʟɪɴɢ?*`
+        }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: '❌', key: msg.key } });
     }
     break;
 }
