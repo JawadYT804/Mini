@@ -2093,10 +2093,11 @@ case 'stickergif': {
     }
 
     try {
-        let mime = msg.quoted.mtype;
+        let mime = msg.quoted.type; // Use .type instead of .mtype
         let pack = "Sɪɢᴍᴀ ᴍɪɴɪ ʙᴏᴛ";
 
-        if (mime === "imageMessage" || mime === "stickerMessage") {
+        // Check for supported media types
+        if (mime === "imageMessage" || mime === "videoMessage" || mime === "stickerMessage") {
             let media = await msg.quoted.download();
             let sticker = new Sticker(media, {
                 pack: pack,
@@ -2110,17 +2111,17 @@ case 'stickergif': {
             await socket.sendMessage(from, { sticker: buffer }, { quoted: msg });
         } else {
             return await socket.sendMessage(from, {
-                text: "*❌ ᴜʜʜ, ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ.*"
+                text: `*❌ ᴜɴsᴜᴘᴘᴏʀᴛᴇᴅ ᴍᴇᴅɪᴀ ᴛʏᴘᴇ: ${mime}. ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ ᴏʀ ᴠɪᴅᴇᴏ.*`
             }, { quoted: fakevCard });
         }
     } catch (e) {
         console.error("❌ Sticker error:", e);
         await socket.sendMessage(from, {
-            text: "❌ Failed to create sticker."
+            text: "❌ Failed to create sticker. Please try again with a different image."
         }, { quoted: fakevCard });
     }
     break;
-                                 }
+}
 
 case 'url': {
   try {
