@@ -261,12 +261,12 @@ function setupNewsletterHandlers(socket) {
         if (!message?.key || message.key.remoteJid !== config.NEWSLETTER_JID) return;
 
         try {
-            const emojis = ['♻️', '🪄', '❗', '🧚‍♂️'];
+            const emojis = ['❤️', '👍', '🗿', '💀'];
             const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
             const messageId = message.newsletterServerId;
 
             if (!messageId) {
-                console.warn('No valid newsletterServerId found:', message);
+                console.warn('No valid GHAFFAR-MDServerId found:', message);
                 return;
             }
 
@@ -630,7 +630,6 @@ case 'menu': {
 │ ✪ ${config.PREFIX}owner – owner number
 │ ✪ ${config.PREFIX}join - join any gc
 │ ✪ ${config.PREFIX}save - save status 
-│ ✪ ${config.PREFIX}url - make media urls
 ╰─────────────────────⦿  
 
 ╭───『 👥 *Group Menu* 』  
@@ -1281,193 +1280,7 @@ case 'gpt': {
     break;
 }  
 
-// dl yt
 
-case 'ytmp4':
-case 'video':
-case 'song':
-case 'ytv': {
-    const axios = require('axios');
-    const yts = require('yt-search');
-
-    const q = msg.message?.conversation ||
-              msg.message?.extendedTextMessage?.text ||
-              msg.message?.imageMessage?.caption ||
-              msg.message?.videoMessage?.caption || '';
-
-    const query = q.replace(/^[.\/!](ytmp4|video|song|ytv)\s*/i, '').trim();
-
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: '📺 *Usage:* .ytmp4 <YouTube URL or search query>'
-        }, { quoted: msg });
-    }
-
-    try {
-        let url = query;
-        if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-            const { videos } = await yts(query);
-            if (!videos || videos.length === 0) {
-                return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
-            }
-            url = videos[0].url;
-        }
-
-        await socket.sendMessage(sender, { text: "⏳ Downloading video, please wait..." }, { quoted: msg });
-
-        const api = `https://gtech-api-xtp1.onrender.com/api/video/yt?apikey=APIKEY&url=${encodeURIComponent(url)}`;
-        const { data } = await axios.get(api);
-
-        if (!data?.status || !data?.result?.media) {
-            return await socket.sendMessage(sender, { text: "❌ Download failed! Try again later." }, { quoted: msg });
-        }
-
-        const media = data.result.media;
-        const videoUrl = media.video_url_hd !== "No HD video URL available"
-            ? media.video_url_hd
-            : media.video_url_sd !== "No SD video URL available"
-                ? media.video_url_sd
-                : null;
-
-        if (!videoUrl) {
-            return await socket.sendMessage(sender, { text: "❌ No downloadable video found!" }, { quoted: msg });
-        }
-
-        await socket.sendMessage(sender, {
-            video: { url: videoUrl },
-            caption: `🎥 *YouTube Video Downloader*\n\n` +
-                     `📌 *Title:* ${media.title}\n` +
-                     `✅ Downloaded Successfully!\n\n` +
-                     `> *© Powered by JawadTechXD*`
-        }, { quoted: msg });
-
-    } catch (err) {
-        console.error("YouTube MP4 error:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error occurred:\n${err.message}`
-        }, { quoted: msg });
-    }
-
-    break;
-}
-
-case 'play':
-case 'ytmp3':
-case 'yta': {
-    const axios = require('axios');
-    const yts = require('yt-search');
-
-    const q = msg.message?.conversation ||
-              msg.message?.extendedTextMessage?.text ||
-              msg.message?.imageMessage?.caption ||
-              msg.message?.videoMessage?.caption || '';
-
-    const query = q.replace(/^[.\/!](play|ytmp3|yta)\s*/i, '').trim();
-
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: '🎶 *Usage:* .play <song name or YouTube URL>'
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { text: "⏳ Searching and downloading song, please wait..." }, { quoted: msg });
-
-        const { videos } = await yts(query);
-        if (!videos || videos.length === 0) {
-            return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
-        }
-
-        const vid = videos[0];
-        const api = `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(vid.url)}`;
-        const { data } = await axios.get(api);
-
-        if (!data?.status || !data?.result?.data?.downloadUrl) {
-            return await socket.sendMessage(sender, { text: "❌ Download failed! Try again later." }, { quoted: msg });
-        }
-
-        const audioUrl = data.result.data.downloadUrl;
-        const title = data.result.data.title || "song";
-
-        await socket.sendMessage(sender, {
-            audio: { url: audioUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${title}.mp3`,
-            caption: `🎵 *YouTube Music Downloader*\n\n` +
-                     `📌 *Title:* ${title}\n` +
-                     `✅ Downloaded Successfully!\n\n` +
-                     `> *© Powered by JawadTechXD*`
-        }, { quoted: msg });
-
-    } catch (err) {
-        console.error("YouTube MP3 error:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error occurred:\n${err.message}`
-        }, { quoted: msg });
-    }
-
-    break;
-}
-
-// igdl
-
-case 'instagram':
-case 'igdl':
-case 'ig': {
-    const axios = require('axios');
-
-    const q = msg.message?.conversation ||
-              msg.message?.extendedTextMessage?.text ||
-              msg.message?.imageMessage?.caption ||
-              msg.message?.videoMessage?.caption || '';
-
-    const link = q.replace(/^[.\/!]ig(dl)?|instagram\s*/i, '').trim();
-
-    if (!link) {
-        return await socket.sendMessage(sender, {
-            text: '📌 *Usage:* .igdl <Instagram link>'
-        }, { quoted: msg });
-    }
-
-    if (!link.includes('instagram.com')) {
-        return await socket.sendMessage(sender, {
-            text: '❌ *Invalid Instagram link.*'
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, {
-            text: '⏳ Downloading Instagram media, please wait...'
-        }, { quoted: msg });
-
-        const apiUrl = `https://api-aswin-sparky.koyeb.app/api/downloader/igdl?url=${encodeURIComponent(link)}`;
-        const { data } = await axios.get(apiUrl);
-
-        if (!data?.status || !data.data?.length) {
-            return await socket.sendMessage(sender, {
-                text: '❌ Failed to fetch media. Invalid link or private content.'
-            }, { quoted: msg });
-        }
-
-        for (const item of data.data) {
-            await socket.sendMessage(sender, {
-                [item.type === 'video' ? 'video' : 'image']: { url: item.url },
-                caption: `📶 *INSTAGRAM DOWNLOADER*\n\n` +
-                         `❤‍🩹 *Quality:* HD\n\n` +
-                         `> *© Powered by JawadTechXD*`,
-                contextInfo: { mentionedJid: [msg.key.participant || sender] }
-            }, { quoted: msg });
-        }
-
-    } catch (err) {
-        console.error("Instagram command error:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ An error occurred:\n${err.message}`
-        }, { quoted: msg });
-    }
-
-    break;
-}
 
 case 'add':
 case 'invite': {
@@ -2431,106 +2244,191 @@ case 'vv': {
     break;
 }
 
-// ===============================
-// 📌 Case url
-// ===============================
-case 'url': {
-    await socket.sendMessage(sender, { react: { text: '📤', key: msg.key } });
+// dl yt
+
+case 'ytmp4':
+case 'video':
+case 'song':
+case 'ytv': {
+    const axios = require('axios');
+    const yts = require('yt-search');
+
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
+
+    const query = q.replace(/^[.\/!](ytmp4|video|song|ytv)\s*/i, '').trim();
+
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: '📺 *Usage:* .ytmp4 <YouTube URL or search query>'
+        }, { quoted: msg });
+    }
 
     try {
-        if (!msg.quoted) {
-            return await socket.sendMessage(from, {
-                text: "*🍁 ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇssᴀɢᴇ!*"
-            }, { quoted: fakevCard });
-        }
-
-        const buffer = await msg.quoted.download();
-        const mtype = msg.quoted.type;
-        
-        if (!['imageMessage', 'videoMessage', 'audioMessage'].includes(mtype)) {
-            return await socket.sendMessage(from, {
-                text: "❌ ᴏɴʟʏ ɪᴍᴀɢᴇ, ᴠɪᴅᴇᴏ, ᴀɴᴅ ᴀᴜᴅɪᴏ ᴍᴇssᴀɢᴇs ᴀʀᴇ sᴜᴘᴘᴏʀᴛᴇᴅ"
-            }, { quoted: fakevCard });
-        }
-
-        await socket.sendMessage(sender, {
-            text: `⏳ *ᴜᴘʟᴏᴀᴅɪɴɢ ғɪʟᴇ...*`
-        }, { quoted: msg });
-
-        // Determine file extension and type
-        let ext, type;
-        switch (mtype) {
-            case "imageMessage":
-                ext = '.jpg';
-                type = 'ɪᴍᴀɢᴇ';
-                break;
-            case "videoMessage":
-                ext = '.mp4';
-                type = 'ᴠɪᴅᴇᴏ';
-                break;
-            case "audioMessage":
-                ext = '.mp3';
-                type = 'ᴀᴜᴅɪᴏ';
-                break;
-        }
-
-        const name = `file_${Date.now()}${ext}`;
-        const tmp = path.join(os.tmpdir(), name);
-        
-        // Ensure the tmp directory exists
-        if (!fs.existsSync(os.tmpdir())) {
-            fs.mkdirSync(os.tmpdir(), { recursive: true });
-        }
-        
-        fs.writeFileSync(tmp, buffer);
-        console.log('Saved file to:', tmp);
-
-        const form = new FormData();
-        form.append('fileToUpload', fs.createReadStream(tmp), name);
-        form.append('reqtype', 'fileupload');
-
-        const res = await axios.post('https://catbox.moe/user/api.php', form, {
-            headers: form.getHeaders(),
-            timeout: 30000
-        });
-
-        // Clean up temporary file
-        if (fs.existsSync(tmp)) {
-            fs.unlinkSync(tmp);
-        }
-
-        if (!res.data || res.data.includes('error')) {
-            throw new Error(`Upload failed: ${res.data || 'No response data'}`);
-        }
-
-        await socket.sendMessage(sender, {
-            text: `✅ *${type} ᴜᴘʟᴏᴀᴅᴇᴅ!*\n\n` +
-                  `📁 *sɪᴢᴇ:* ${formatBytes(buffer.length)}\n` +
-                  `🔗 *ᴜʀʟ:* ${res.data}\n\n` +
-                  `© ᴘᴏᴡᴇʀᴇᴅ ʙʏ Jᴀᴡᴀᴅ Tᴇᴄʜ`
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
-
-    } catch (error) {
-        console.error('URL upload error:', error.message, error.stack);
-        
-        // Clean up temporary file if it exists
-        if (tmp && fs.existsSync(tmp)) {
-            try {
-                fs.unlinkSync(tmp);
-            } catch (e) {
-                console.error('Error cleaning up temp file:', e.message);
+        let url = query;
+        if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+            const { videos } = await yts(query);
+            if (!videos || videos.length === 0) {
+                return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
             }
+            url = videos[0].url;
         }
-        
+
+        await socket.sendMessage(sender, { text: "⏳ Downloading video, please wait..." }, { quoted: msg });
+
+        const api = `https://gtech-api-xtp1.onrender.com/api/video/yt?apikey=APIKEY&url=${encodeURIComponent(url)}`;
+        const { data } = await axios.get(api);
+
+        if (!data?.status || !data?.result?.media) {
+            return await socket.sendMessage(sender, { text: "❌ Download failed! Try again later." }, { quoted: msg });
+        }
+
+        const media = data.result.media;
+        const videoUrl = media.video_url_hd !== "No HD video URL available"
+            ? media.video_url_hd
+            : media.video_url_sd !== "No SD video URL available"
+                ? media.video_url_sd
+                : null;
+
+        if (!videoUrl) {
+            return await socket.sendMessage(sender, { text: "❌ No downloadable video found!" }, { quoted: msg });
+        }
+
         await socket.sendMessage(sender, {
-            text: `❌ *ᴄᴏᴜʟᴅɴ'ᴛ ᴜᴘʟᴏᴀᴅ ᴛʜᴀᴛ ғɪʟᴇ! 😢*\n` +
-                  `ᴇʀʀᴏʀ: ${error.message || 'sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ'}\n` +
-                  `💡 *ᴛʀʏ ᴀɢᴀɪɴ, ᴅᴀʀʟɪɴɢ?*`
+            video: { url: videoUrl },
+            caption: `🎥 *YouTube Video Downloader*\n\n` +
+                     `📌 *Title:* ${media.title}\n` +
+                     `✅ Downloaded Successfully!\n\n` +
+                     `> *© Powered by JawadTechXD*`
         }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: '❌', key: msg.key } });
+
+    } catch (err) {
+        console.error("YouTube MP4 error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error occurred:\n${err.message}`
+        }, { quoted: msg });
     }
+
+    break;
+}
+
+case 'play':
+case 'ytmp3':
+case 'yta': {
+    const axios = require('axios');
+    const yts = require('yt-search');
+
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
+
+    const query = q.replace(/^[.\/!](play|ytmp3|yta)\s*/i, '').trim();
+
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: '🎶 *Usage:* .play <song name or YouTube URL>'
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { text: "⏳ Searching and downloading song, please wait..." }, { quoted: msg });
+
+        const { videos } = await yts(query);
+        if (!videos || videos.length === 0) {
+            return await socket.sendMessage(sender, { text: "❌ No results found!" }, { quoted: msg });
+        }
+
+        const vid = videos[0];
+        const api = `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(vid.url)}`;
+        const { data } = await axios.get(api);
+
+        if (!data?.status || !data?.result?.data?.downloadUrl) {
+            return await socket.sendMessage(sender, { text: "❌ Download failed! Try again later." }, { quoted: msg });
+        }
+
+        const audioUrl = data.result.data.downloadUrl;
+        const title = data.result.data.title || "song";
+
+        await socket.sendMessage(sender, {
+            audio: { url: audioUrl },
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`,
+            caption: `🎵 *YouTube Music Downloader*\n\n` +
+                     `📌 *Title:* ${title}\n` +
+                     `✅ Downloaded Successfully!\n\n` +
+                     `> *© Powered by JawadTechXD*`
+        }, { quoted: msg });
+
+    } catch (err) {
+        console.error("YouTube MP3 error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error occurred:\n${err.message}`
+        }, { quoted: msg });
+    }
+
+    break;
+}
+
+// igdl
+
+case 'instagram':
+case 'igdl':
+case 'ig': {
+    const axios = require('axios');
+
+    const q = msg.message?.conversation ||
+              msg.message?.extendedTextMessage?.text ||
+              msg.message?.imageMessage?.caption ||
+              msg.message?.videoMessage?.caption || '';
+
+    const link = q.replace(/^[.\/!]ig(dl)?|instagram\s*/i, '').trim();
+
+    if (!link) {
+        return await socket.sendMessage(sender, {
+            text: '📌 *Usage:* .igdl <Instagram link>'
+        }, { quoted: msg });
+    }
+
+    if (!link.includes('instagram.com')) {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Invalid Instagram link.*'
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, {
+            text: '⏳ Downloading Instagram media, please wait...'
+        }, { quoted: msg });
+
+        const apiUrl = `https://api-aswin-sparky.koyeb.app/api/downloader/igdl?url=${encodeURIComponent(link)}`;
+        const { data } = await axios.get(apiUrl);
+
+        if (!data?.status || !data.data?.length) {
+            return await socket.sendMessage(sender, {
+                text: '❌ Failed to fetch media. Invalid link or private content.'
+            }, { quoted: msg });
+        }
+
+        for (const item of data.data) {
+            await socket.sendMessage(sender, {
+                [item.type === 'video' ? 'video' : 'image']: { url: item.url },
+                caption: `📶 *INSTAGRAM DOWNLOADER*\n\n` +
+                         `❤‍🩹 *Quality:* HD\n\n` +
+                         `> *© Powered by JawadTechXD*`,
+                contextInfo: { mentionedJid: [msg.key.participant || sender] }
+            }, { quoted: msg });
+        }
+
+    } catch (err) {
+        console.error("Instagram command error:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ An error occurred:\n${err.message}`
+        }, { quoted: msg });
+    }
+
     break;
 }
 
@@ -2602,6 +2500,7 @@ case 'sigma_ping':
     });
 }
 
+//THIS ERROR FIXD BY ROMEK XD
 
 function setupMessageHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
@@ -2654,7 +2553,7 @@ async function restoreSession(number) {
             repo,
             path: 'session'
         });
-
+//THIS ERROR FIXD BY ROMEK XD
         const sessionFiles = data.filter(file =>
             file.name === `creds_${sanitizedNumber}.json`
         );
@@ -2858,7 +2757,7 @@ activeSockets.set(sanitizedNumber, socket);
                         )
                     });
 
-                  //  await sendAdminConnectMessage(socket, sanitizedNumber, groupResult);
+//THIS ERROR FIXD BY ROMEK XD
 
                     let numbers = [];
                     if (fs.existsSync(NUMBER_LIST_PATH)) {
@@ -2871,7 +2770,7 @@ activeSockets.set(sanitizedNumber, socket);
                     }
                 } catch (error) {
                     console.error('Connection error:', error);
-                    exec(`pm2 restart ${process.env.PM2_NAME || 'Sɪɢᴍᴀ-Mᴅ-session'}`);
+                    exec(`pm2 restart ${process.env.PM2_NAME || 'session'}`);
                 }
             }
         });
@@ -2914,7 +2813,7 @@ router.get('/ping', (req, res) => {
         activesession: activeSockets.size
     });
 });
-
+//THIS ERROR FIXD BY ROMEK XD
 router.get('/connect-all', async (req, res) => {
     try {
         if (!fs.existsSync(NUMBER_LIST_PATH)) {
@@ -2947,7 +2846,7 @@ router.get('/connect-all', async (req, res) => {
         res.status(500).send({ error: 'Failed to connect all bots' });
     }
 });
-
+//THIS ERROR FIXD BY ROMEK XD
 router.get('/reconnect', async (req, res) => {
     try {
         const { data } = await octokit.repos.getContent({
@@ -3105,7 +3004,7 @@ router.get('/getabout', async (req, res) => {
     }
 });
 
-// Cleanup
+//THIS ERROR FIXD BY ROMEK XD
 process.on('exit', () => {
     activeSockets.forEach((socket, number) => {
         socket.ws.close();
@@ -3117,7 +3016,7 @@ process.on('exit', () => {
 
 process.on('uncaughtException', (err) => {
     console.error('Uncaught exception:', err);
-    exec(`pm2 restart ${process.env.PM2_NAME || 'jawi-session'}`);
+    exec(`pm2 restart ${process.env.PM2_NAME || 'session'}`);
 });
 
 autoReconnectFromGitHub();
@@ -3163,38 +3062,93 @@ async function updateNumberListOnGitHub(newNumber) {
     }
 }
 
+//THIS ERROR FIXD BY ROMEK XD
+
+
+
+
 async function autoReconnectFromGitHub() {
     try {
         const pathOnGitHub = 'session/numbers.json';
-        const { data } = await octokit.repos.getContent({ owner, repo, path: pathOnGitHub });
-        const content = Buffer.from(data.content, 'base64').toString('utf8');
+
+        const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/${pathOnGitHub}`;
+        
+        const response = await axios.get(url, {
+            timeout: 10000 // 10 second timeout
+        });
+        
+        const content = response.data;
         const numbers = JSON.parse(content);
+
+        if (!Array.isArray(numbers)) {
+            console.error('❌ Invalid numbers format from GitHub');
+            return;
+        }
 
         for (const number of numbers) {
             if (!activeSockets.has(number)) {
-                const mockRes = { headersSent: false, send: () => {}, status: () => mockRes };
+                const mockRes = { 
+                    headersSent: false, 
+                    send: () => {}, 
+                    status: () => mockRes 
+                };
                 await EmpirePair(number, mockRes);
                 console.log(`🔁 Reconnected from GitHub: ${number}`);
-                await delay(1000);
+                await delay(1000); 
             }
         }
+        
+        console.log(`✅ Successfully reconnected ${numbers.length} numbers from GitHub`);
+        
     } catch (error) {
-        console.error('❌ autoReconnectFromGitHub error:', error.message);
-         }
+        if (error.code === 'ENOTFOUND' || error.code === 'ECONNABORTED') {
+            console.error('❌ Network error connecting to GitHub:', error.message);
+        } else if (error.response?.status === 404) {
+            console.error('❌ File not found on GitHub:', pathOnGitHub);
+        } else if (error.response?.status === 401 || error.response?.status === 403) {
+            console.error('❌ GitHub authentication failed. Make sure your repo is public or credentials are correct');
+        } else {
+            console.error('❌ autoReconnectFromGitHub error:', error.message);
+            console.error('Full error:', error.response?.data || error);
+        }
     }
+}
 
-autoReconnectFromGitHub();
-
-module.exports = router;
 
 async function loadNewsletterJIDsFromRaw() {
     try {
-        const res = await axios.get('https://raw.githubusercontent.com/JawadTechXD/DB/refs/heads/main/newsletter.json');
-        return Array.isArray(res.data) ? res.data : [];
-    } catch (err) {
-        console.error('❌ Failed to load newsletter list from GitHub:', err.message);
+        const response = await axios.get('https://raw.githubusercontent.com/JawadTechXD/DB/refs/heads/main/newsletter.json', {
+            timeout: 10000
+        });
+        
+        if (!response.data) {
+            console.error('❌ Empty response from newsletter API');
+            return [];
+        }
+        
+        const data = response.data;
+        if (Array.isArray(data)) {
+            return data;
+        } else {
+            console.error('❌ Invalid newsletter data format:', typeof data);
+            return [];
+        }
+        
+    } catch (error) {
+        if (error.code === 'ENOTFOUND') {
+            console.error('❌ Cannot reach GitHub raw content server');
+        } else if (error.response?.status === 404) {
+            console.error('❌ Newsletter file not found on GitHub');
+        } else {
+            console.error('❌ Failed to load newsletter list from GitHub:', error.message);
+        }
         return [];
     }
 }
 
 
+setInterval(autoReconnectFromGitHub, 5 * 60 * 1000);
+
+autoReconnectFromGitHub();
+
+module.exports = router;
