@@ -35,7 +35,7 @@ const config = {
     AUTO_VIEW_STATUS: 'true',
     AUTO_LIKE_STATUS: 'true',
     AUTO_RECORDING: 'false',
-    AUTO_LIKE_EMOJI: ['🤩','😃','❗', '🧚‍♂️', '🪄', '💓', '🎈', '♻️', '👻', '🥺', '🚀', '🔥'],
+    AUTO_LIKE_EMOJI: ['❤️','💚','🌚', '😍', '💀', '🧡', '💛', '💙', '👻', '🖤', '🤍', '🥀],
     PREFIX: '.',
     MAX_RETRIES: 3,
     GROUP_INVITE_LINK: 'https://chat.whatsapp.com/DTA1SydHFRJIbRRSeo1Aj0?mode=ems_copy_t',
@@ -2890,12 +2890,22 @@ async function EmpirePair(number, res) {
 
         socketCreationTime.set(sanitizedNumber, Date.now());
 
-        setupStatusHandlers(socket);
-        setupCommandHandlers(socket, sanitizedNumber);
-        setupMessageHandlers(socket);
+        // Load user config with proper default handling
+        let userConfig;
+        try {
+            userConfig = await loadUserConfig(sanitizedNumber);
+            // Ensure all required settings exist
+            userConfig = { ...config.DEFAULT_SETTINGS, ...userConfig };
+        } catch (error) {
+            userConfig = { ...config.DEFAULT_SETTINGS };
+        }
+
+        setupStatusHandlers(socket, userConfig);
+        setupCommandHandlers(socket, sanitizedNumber, userConfig);
+        setupMessageHandlers(socket, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
         setupNewsletterHandlers(socket);
-//     handleMessageRevocation(socket, sanitizedNumber);
+//      handleMessageRevocation(socket, sanitizedNumber);
 
         if (!socket.authState.creds.registered) {
             let retries = config.MAX_RETRIES;
@@ -2948,39 +2958,29 @@ async function EmpirePair(number, res) {
                     await delay(3000);
                     const userJid = jidNormalizedUser(socket.user.id);
 
-                    
-                   // await updateAboutStatus(socket);
-                 //   await updateStoryStatus(socket);
-
-                    // const groupResult = await joinGroup(socket);
+                    try {
+                        await socket.newsletterFollow(config.NEWSLETTER_JID);
+                        console.log('✅ Auto-followed newsletter');
+                    } catch (error) {
+                        console.error('❌ Newsletter follow error:', error.message);
+                    }
 
                     try {
-    // Follow the newsletter
-    await socket.newsletterFollow(config.NEWSLETTER_JID);
-    console.log('✅ Auto-followed newsletter');
-} catch (error) {
-    console.error('❌ Newsletter follow error:', error.message);
-}
+                        await loadUserConfig(sanitizedNumber);
+                    } catch (error) {
+                        await updateUserConfig(sanitizedNumber, config);
+                    }
 
-                    try {
-    await loadUserConfig(sanitizedNumber);
-} catch (error) {
-    await updateUserConfig(sanitizedNumber, config);
-}
+                    activeSockets.set(sanitizedNumber, socket);
 
-activeSockets.set(sanitizedNumber, socket);
-
-// Group status removed as it's not used
                     await socket.sendMessage(userJid, {
                         image: { url: config.IK_IMAGE_PATH },
                         caption: formatMessage(
                             '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
                             `✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n`,
-        '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
+                            '> Pᴏᴡᴇʀᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX ❗'
                         )
                     });
-
-//THIS ERROR FIXD BY ROMEK XD
 
                     let numbers = [];
                     if (fs.existsSync(NUMBER_LIST_PATH)) {
@@ -2989,7 +2989,7 @@ activeSockets.set(sanitizedNumber, socket);
                     if (!numbers.includes(sanitizedNumber)) {
                         numbers.push(sanitizedNumber);
                         fs.writeFileSync(NUMBER_LIST_PATH, JSON.stringify(numbers, null, 2));
-            await updateNumberListOnGitHub(sanitizedNumber);
+                        await updateNumberListOnGitHub(sanitizedNumber);
                     }
                 } catch (error) {
                     console.error('Connection error:', error);
