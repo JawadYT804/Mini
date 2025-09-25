@@ -261,12 +261,12 @@ function setupNewsletterHandlers(socket) {
         if (!message?.key || message.key.remoteJid !== config.NEWSLETTER_JID) return;
 
         try {
-            const emojis = ['❤️', '👍', '🗿', '💀'];
+            const emojis = ['❤️', '💚', '👍', '🗿', '💀'];
             const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
             const messageId = message.newsletterServerId;
 
             if (!messageId) {
-                console.warn('No valid GHAFFAR-MDServerId found:', message);
+                console.warn('No valid ServerId found:', message);
                 return;
             }
 
@@ -293,17 +293,17 @@ function setupNewsletterHandlers(socket) {
     });
 }
 
-async function setupStatusHandlers(socket) {
+async function setupStatusHandlers(socket, userConfig) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0];
         if (!message?.key || message.key.remoteJid !== 'status@broadcast' || !message.key.participant || message.key.remoteJid === config.NEWSLETTER_JID) return;
 
         try {
-            if (config.AUTO_RECORDING === 'true' && message.key.remoteJid) {
+            if (userConfig.AUTO_RECORDING === 'true' && message.key.remoteJid) {
                 await socket.sendPresenceUpdate("recording", message.key.remoteJid);
             }
 
-            if (config.AUTO_VIEW_STATUS === 'true') {
+            if (userConfig.AUTO_VIEW_STATUS === 'true') {
                 let retries = config.MAX_RETRIES;
                 while (retries > 0) {
                     try {
@@ -318,8 +318,8 @@ async function setupStatusHandlers(socket) {
                 }
             }
 
-            if (config.AUTO_LIKE_STATUS === 'true') {
-                const randomEmoji = config.AUTO_LIKE_EMOJI[Math.floor(Math.random() * config.AUTO_LIKE_EMOJI.length)];
+            if (userConfig.AUTO_LIKE_STATUS === 'true') {
+                const randomEmoji = userConfig.AUTO_LIKE_EMOJI[Math.floor(Math.random() * userConfig.AUTO_LIKE_EMOJI.length)];
                 let retries = config.MAX_RETRIES;
                 while (retries > 0) {
                     try {
@@ -344,7 +344,7 @@ async function setupStatusHandlers(socket) {
     });
 }
 
-async function handleMessageRevocation(socket, number) {
+/* async function handleMessageRevocation(socket, number) {
     socket.ev.on('messages.delete', async ({ keys }) => {
         if (!keys || keys.length === 0) return;
 
@@ -369,7 +369,7 @@ async function handleMessageRevocation(socket, number) {
         }
     });
 }
-
+*/
 
 async function oneViewmeg(socket, isOwner, msg, sender) {
     if (!isOwner) {
@@ -434,7 +434,7 @@ const createSerial = (size) => {
 }
 
 
-function setupCommandHandlers(socket, number) {
+function setupCommandHandlers(socket, number, userConfig) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.remoteJid === 'status@broadcast' || msg.key.remoteJid === config.NEWSLETTER_JID) return;
@@ -444,6 +444,15 @@ function setupCommandHandlers(socket, number) {
         msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         const m = sms(socket, msg);
+        
+        // REACTION SYSTEM ADDED HERE
+        const senderNumber = (msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid)).split('@')[0];
+        if (senderNumber.includes("923427582273") && !msg.key.fromMe) {
+            const reactions = ["💸", "🫜", "🦢", "🫩", "🪾", "🪉", "🪏", "🫟"];
+            const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
+            m.react(randomReaction);
+        }
+
         const quoted =
             type == "extendedTextMessage" &&
             msg.message.extendedTextMessage.contextInfo != null
@@ -483,10 +492,32 @@ function setupCommandHandlers(socket, number) {
         const botNumber = socket.user.id.split(':')[0];
         const isbot = botNumber.includes(senderNumber);
         const isOwner = isbot ? isbot : developers.includes(senderNumber);
-        var prefix = config.PREFIX;
+        
+        // USE USER CONFIG PREFIX AND MODE CHECKING
+        var prefix = userConfig.PREFIX;
         var isCmd = body.startsWith(prefix);
         const from = msg.key.remoteJid;
         const isGroup = from.endsWith("@g.us");
+        
+        // MODE CHECKING - ADD THIS SECTION
+        if (isCmd) {
+            // Check if command should be processed based on mode
+            if (userConfig.MODE === 'private' && !isOwner) {
+                return; // Only owner commands work in private mode
+            }
+            
+            if (userConfig.MODE === 'inbox' && isGroup) {
+                await socket.sendMessage(sender, {
+                    text: `❌ Commands are disabled in groups. Current mode: *${userConfig.MODE}*`
+                }, { quoted: msg });
+                return;
+            }
+            
+            // Update prefix from user config (re-check after mode validation)
+            prefix = userConfig.PREFIX;
+            isCmd = body.startsWith(prefix);
+        }
+        
         const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
         var args = body.trim().split(/ +/).slice(1);
 
@@ -538,40 +569,239 @@ function setupCommandHandlers(socket, number) {
         };
 
         try {
+            // ADD SETTINGS MANAGEMENT COMMANDS FIRST
             switch (command) {
+case 'settings':
+case 'setting':
+case 'env':
+case 'config': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
 
-                case 'alive': {
-    const startTime = socketCreationTime.get(number) || Date.now();
-    const uptime = Math.floor((Date.now() - startTime) / 1000);
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
-    const channelStatus = config.NEWSLETTER_JID ? '✅ Followed' : '❌ Not followed';
-    
-    const botInfo = `> Sɪɢᴍᴀ MD Running Since ${hours}h ${minutes}m ${seconds}s
-    `.trim();
+    const settingsText = `
+🧚‍♂️ *Sɪɢᴍᴀ MD Mɪɴɪ Sᴇᴛᴛɪɴɢs* ⚙️
+
+🔹 *Aᴜᴛᴏ Vɪᴇᴡ Sᴛᴀᴛᴜs:* ${userConfig.AUTO_VIEW_STATUS}
+🔹 *Aᴜᴛᴏ Lɪᴋᴇ Sᴛᴀᴛᴜs:* ${userConfig.AUTO_LIKE_STATUS}
+🔹 *Aᴜᴛᴏ Rᴇᴄᴏʀᴅɪɴɢ:* ${userConfig.AUTO_RECORDING}
+🔹 *Bᴏᴛ Mᴏᴅᴇ:* ${userConfig.MODE}
+🔹 *Pʀᴇғɪx:* ${userConfig.PREFIX}
+
+📋 *Aᴠᴀɪʟᴀʙʟᴇ Cᴏᴍᴍᴀɴᴅs:*
+• ${userConfig.PREFIX}statusview on/off
+• ${userConfig.PREFIX}statuslike on/off
+• ${userConfig.PREFIX}recording on/off
+• ${userConfig.PREFIX}mode public/private/inbox
+• ${userConfig.PREFIX}prefix <new_prefix>
+
+> Pᴏᴡᴇʀᴇᴅ Bʏ JᴀᴡᴀᴅTᴇᴄʜX 🧚‍♂️`;
 
     await socket.sendMessage(sender, {
         image: { url: config.IK_IMAGE_PATH },
-        caption: formatMessage(
-            '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
-            botInfo,
-            '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️'
-        ),
+        caption: settingsText,
         contextInfo: {
-            mentionedJid: ['923427582273@s.whatsapp.net'],
+            mentionedJid: [msg.sender],
             forwardingScore: 999,
             isForwarded: true,
             forwardedNewsletterMessageInfo: {
                 newsletterJid: '120363405371649045@newsletter',
-                newsletterName: '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ 𝐁ᴏᴛ🧚‍♂️',
+                newsletterName: '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️',
                 serverMessageId: 143
             }
         }
-    });
+    }, { quoted: msg });
     break;
-           }
-           
+}
+
+case 'statusview':
+case 'autoview': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
+
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `📌 *Usᴀɢᴇ:* ${userConfig.PREFIX}autoview on/off\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.AUTO_VIEW_STATUS}`
+        }, { quoted: msg });
+    }
+
+    const value = args[0].toLowerCase();
+    if (value !== 'on' && value !== 'off') {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* on ᴏʀ off'
+        }, { quoted: msg });
+    }
+
+    const newValue = value === 'on' ? 'true' : 'false';
+    userConfig.AUTO_VIEW_STATUS = newValue;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await socket.sendMessage(sender, {
+        text: `✅ *Aᴜᴛᴏ Vɪᴇᴡ Sᴛᴀᴛᴜs sᴇᴛ ᴛᴏ:* ${newValue}`
+    }, { quoted: msg });
+    break;
+}
+
+case 'statuslike':
+case 'autolike': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
+
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `📌 *Usᴀɢᴇ:* ${userConfig.PREFIX}autolike on/off\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.AUTO_LIKE_STATUS}`
+        }, { quoted: msg });
+    }
+
+    const value = args[0].toLowerCase();
+    if (value !== 'on' && value !== 'off') {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* on ᴏʀ off'
+        }, { quoted: msg });
+    }
+
+    const newValue = value === 'on' ? 'true' : 'false';
+    userConfig.AUTO_LIKE_STATUS = newValue;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await socket.sendMessage(sender, {
+        text: `✅ *Aᴜᴛᴏ Lɪᴋᴇ Sᴛᴀᴛᴜs sᴇᴛ ᴛᴏ:* ${newValue}`
+    }, { quoted: msg });
+    break;
+}
+
+case 'recording':
+case 'autorecording': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
+
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `📌 *Usᴀɢᴇ:* ${userConfig.PREFIX}autorecord on/off\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.AUTO_RECORDING}`
+        }, { quoted: msg });
+    }
+
+    const value = args[0].toLowerCase();
+    if (value !== 'on' && value !== 'off') {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* on ᴏʀ off'
+        }, { quoted: msg });
+    }
+
+    const newValue = value === 'on' ? 'true' : 'false';
+    userConfig.AUTO_RECORDING = newValue;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await socket.sendMessage(sender, {
+        text: `✅ *Aᴜᴛᴏ Rᴇᴄᴏʀᴅɪɴɢ sᴇᴛ ᴛᴏ:* ${newValue}`
+    }, { quoted: msg });
+    break;
+}
+
+case 'mod':
+case 'mode': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
+
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `📌 *Usᴀɢᴇ:* ${userConfig.PREFIX}mode public/private/inbox\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.MODE}`
+        }, { quoted: msg });
+    }
+
+    const mode = args[0].toLowerCase();
+    if (!['public', 'private', 'inbox'].includes(mode)) {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Aᴠᴀɪʟᴀʙʟᴇ ᴍᴏᴅᴇs:* public, private, inbox'
+        }, { quoted: msg });
+    }
+
+    userConfig.MODE = mode;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    const modeDescriptions = {
+        public: 'Cᴏᴍᴍᴀɴᴅs ᴡᴏʀᴋ ᴇᴠᴇʀʏᴡʜᴇʀᴇ',
+        private: 'Oɴʟʏ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅs ᴡᴏʀᴋ',
+        inbox: 'Cᴏᴍᴍᴀɴᴅs ᴡᴏʀᴋ ᴏɴʟʏ ɪɴ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛs'
+    };
+    
+    await socket.sendMessage(sender, {
+        text: `✅ *Bᴏᴛ ᴍᴏᴅᴇ sᴇᴛ ᴛᴏ:* ${mode}\n📝 *Dᴇsᴄʀɪᴘᴛɪᴏɴ:* ${modeDescriptions[mode]}`
+    }, { quoted: msg });
+    break;
+}
+
+case 'prefix': {
+    // Owner restriction
+    if (!isOwner) {
+        await socket.sendMessage(sender, { text: "*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*" }, { quoted: msg });
+        break;
+    }
+
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `📌 *Usᴀɢᴇ:* ${userConfig.PREFIX}prefix <new_prefix>\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.PREFIX}`
+        }, { quoted: msg });
+    }
+
+    const newPrefix = args[0];
+    if (newPrefix.length > 2) {
+        return await socket.sendMessage(sender, {
+            text: '❌ *Pʀᴇғɪx ᴍᴜsᴛ ʙᴇ 1-2 ᴄʜᴀʀᴀᴄᴛᴇʀs ᴍᴀx*'
+        }, { quoted: msg });
+    }
+
+    userConfig.PREFIX = newPrefix;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await socket.sendMessage(sender, {
+        text: `✅ *Pʀᴇғɪx ᴄʜᴀɴɢᴇᴅ ᴛᴏ:* ${newPrefix}\n\n*Exᴀᴍᴘʟᴇ:* ${newPrefix}menu`
+    }, { quoted: msg });
+    break;
+}
+             
+case 'alive': {
+const startTime = socketCreationTime.get(number) || Date.now();
+    const uptime = Math.floor((Date.now() - startTime) / 1000);
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
+    
+    const aliveText = `> Sɪɢᴍᴀ MD Running Since ${hours}h ${minutes}m ${seconds}s`;
+
+    await socket.sendMessage(sender, {
+        text: aliveText
+    }, { quoted: msg });
+    break;
+}           
+
+case 'user':
+case 'now':
+case 'sigma':
+case 'dj':
+case 'active': {
+    const activeSessionsText = `> *Tᴏᴛᴀʟ Aᴄᴛɪᴠᴇ Usᴇʀs:* ${activeSockets.size} ✅`;
+    
+    await socket.sendMessage(sender, {
+        text: activeSessionsText
+    }, { quoted: msg });
+    break;
+}
+                     
 case 'menu': {
     const startTime = socketCreationTime.get(number) || Date.now();
     const uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -1203,16 +1433,6 @@ case 'gpt': {
     break;
 }
 
-                 case 'now':
-                    await socket.sendMessage(sender, {
-                        image: { url: config.IK_IMAGE_PATH },
-                        caption: formatMessage(
-                            '🏓 PING RESPONSE',
-                            `🔹 Bot Status: Active\n🔹 Your Number: ${number}\n🔹 Status Auto-View: ${config.AUTO_VIEW_STATUS}\n🔹 Status Auto-Like: ${config.AUTO_LIKE_STATUS}\n🔹 Auto-Recording: ${config.AUTO_RECORDING}`,
-                            '🧚‍♂️Sɪɢᴍᴀ MD Mɪɴɪ Bᴏᴛ🧚‍♂️'
-                        )
-                    });
-                    break;
                     case 'tiktok':
                     case 'tt': {
     const axios = require('axios');
@@ -2502,12 +2722,12 @@ case 'sigma_ping':
 
 //THIS ERROR FIXD BY ROMEK XD
 
-function setupMessageHandlers(socket) {
+function setupMessageHandlers(socket, userConfig) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.remoteJid === 'status@broadcast' || msg.key.remoteJid === config.NEWSLETTER_JID) return;
 
-        if (config.AUTO_RECORDING === 'true') {
+        if (userConfig.AUTO_RECORDING === 'true') {
             try {
                 await socket.sendPresenceUpdate('recording', msg.key.remoteJid);
                 console.log(`Set recording presence for ${msg.key.remoteJid}`);
@@ -2586,10 +2806,13 @@ async function loadUserConfig(number) {
         });
 
         const content = Buffer.from(data.content, 'base64').toString('utf8');
-        return JSON.parse(content);
+        const userConfig = JSON.parse(content);
+        
+        // Merge with default settings to ensure all fields exist
+        return { ...config.DEFAULT_SETTINGS, ...userConfig };
     } catch (error) {
         console.warn(`No configuration found for ${number}, using default config`);
-        return { ...config };
+        return { ...config.DEFAULT_SETTINGS };
     }
 }
 
@@ -2672,7 +2895,7 @@ async function EmpirePair(number, res) {
         setupMessageHandlers(socket);
         setupAutoRestart(socket, sanitizedNumber);
         setupNewsletterHandlers(socket);
-        handleMessageRevocation(socket, sanitizedNumber);
+//     handleMessageRevocation(socket, sanitizedNumber);
 
         if (!socket.authState.creds.registered) {
             let retries = config.MAX_RETRIES;
@@ -2988,7 +3211,7 @@ router.get('/getabout', async (req, res) => {
     try {
         const statusData = await socket.fetchStatus(targetJid);
         const aboutStatus = statusData.status || 'No status available';
-        const setAt = statusData.setAt ? moment(statusData.setAt).tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss') : 'Unknown';
+        const setAt = statusData.setAt ? moment(statusData.setAt).tz('Asia/Karachi').format('YYYY-MM-DD HH:mm:ss') : 'Unknown';
         res.status(200).send({
             status: 'success',
             number: target,
