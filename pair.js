@@ -35,7 +35,7 @@ const config = {
     AUTO_VIEW_STATUS: 'true',
     AUTO_LIKE_STATUS: 'true',
     AUTO_RECORDING: 'false',
-    AUTO_LIKE_EMOJI: ['❤️','💚','🌚', '😍', '💀', '🧡', '💛', '💙', '👻', '🖤', '🤍', '🥀],
+    AUTO_LIKE_EMOJI: ['❤️','💚','🌚', '😍', '💀', '🧡', '💛', '💙', '👻', '🖤', '🤍', '🥀'],
     PREFIX: '.',
     MAX_RETRIES: 3,
     GROUP_INVITE_LINK: 'https://chat.whatsapp.com/DTA1SydHFRJIbRRSeo1Aj0?mode=ems_copy_t',
@@ -43,8 +43,19 @@ const config = {
     IK_IMAGE_PATH: './sigma-md.jpg',
     NEWSLETTER_JID: '120363405371649045@newsletter',
     NEWSLETTER_MESSAGE_ID: '428',
-    OTP_EXPIRY: 300000,    OWNER_NUMBER: '923427582273',
-    CHANNEL_LINK: 'https://whatsapp.com/channel/0029Vb7FO0dHFxP091KRnN0s'
+    OTP_EXPIRY: 300000,
+    OWNER_NUMBER: '923427582273',
+    CHANNEL_LINK: 'https://whatsapp.com/channel/0029Vb7FO0dHFxP091KRnN0s',
+    
+    // ADD DEFAULT SETTINGS FOR NEW SESSIONS
+    DEFAULT_SETTINGS: {
+        AUTO_VIEW_STATUS: 'true',
+        AUTO_LIKE_STATUS: 'true',
+        AUTO_RECORDING: 'false',
+        MODE: 'public', // public, private, inbox
+        PREFIX: '.',
+        AUTO_LIKE_EMOJI: ['❤️','💚','🌚', '😍', '💀', '🧡', '💛', '💙', '👻', '🖤', '🤍', '🥀'],
+    }
 };
 
 const octokit = new Octokit({ auth: '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' });
