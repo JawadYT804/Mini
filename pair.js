@@ -58,9 +58,9 @@ const config = {
     }
 };
 
-const octokit = new Octokit({ auth: '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' });
-const owner = 'ataakha';
-const repo = 'SESSION';
+const octokit = new Octokit({ auth: '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' });
+const owner = 'Zentor-xd';
+const repo = 'Sigma-data';
 
 const activeSockets = new Map();
 const socketCreationTime = new Map();
@@ -597,8 +597,7 @@ case 'config': {
         break;
     }
 
-    const settingsText = `
-🧚‍♂️ *Sɪɢᴍᴀ MD Mɪɴɪ Sᴇᴛᴛɪɴɢs* ⚙️
+    const settingsText = `> *Sɪɢᴍᴀ MD Mɪɴɪ Sᴇᴛᴛɪɴɢs* ⚙️
 
 🔹 *Aᴜᴛᴏ Vɪᴇᴡ Sᴛᴀᴛᴜs:* ${userConfig.AUTO_VIEW_STATUS}
 🔹 *Aᴜᴛᴏ Lɪᴋᴇ Sᴛᴀᴛᴜs:* ${userConfig.AUTO_LIKE_STATUS}
@@ -607,6 +606,7 @@ case 'config': {
 🔹 *Pʀᴇғɪx:* ${userConfig.PREFIX}
 
 📋 *Aᴠᴀɪʟᴀʙʟᴇ Cᴏᴍᴍᴀɴᴅs:*
+
 • ${userConfig.PREFIX}statusview on/off
 • ${userConfig.PREFIX}statuslike on/off
 • ${userConfig.PREFIX}recording on/off
@@ -829,8 +829,7 @@ case 'menu': {
 
     const now = new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" }); // adjust timezone if needed
 
-    const menuText = `
-*╭┄┄✪ SiGMA-MD Mini ✪┄┄⊷*  
+    const menuText = `*╭┄┄✪ SiGMA-MD Mini ✪┄┄⊷*  
 *┃❂┬───────────────────┄┄*  
 *┃❂┊ 👨‍💻 Owner:* JawadTech  
 *┃❂┊ 📡 Library:* Multi-Device (Baileys)  
@@ -872,6 +871,7 @@ case 'menu': {
 ╰─────────────────────⦿  
 
 ╭───『 🖼 *Owner Menu* 』  
+│ ✪ ${config.PREFIX}pair - connect bot
 │ ✪ ${config.PREFIX}getpp <@user> 
 │ ✪ ${config.PREFIX}alive check alive 
 │ ✪ ${config.PREFIX}uptime check runtime
@@ -2679,30 +2679,31 @@ case 'pong':
             react: { text: '⚡', key: msg.key } 
         });
 
-        const emojis = ['🎯','🔥','🔮','🌩️','👻','🍁','🐍','🎋','🎐','🪸','📍','👑','🌀','🪄','🪀','🪂','⚡️','🚀','🏎️','🚁','🌀','📟','🎲','✨'];
+        const emojis = [
+            '🎯','🔥','🔮','🌩️','👻','🍁','🐍','🎋','🎐','🪸',
+            '📍','👑','🌀','🪄','🪀','🪂','⚡️','🚀','🏎️','🚁',
+            '🌀','📟','🎲','✨'
+        ];
         const randomEmojix = emojis[Math.floor(Math.random() * emojis.length)];
-        
+
         var initial = new Date().getTime();
-        
-        // Sending temporary message
-        let ping = await socket.sendMessage(sender, { 
-            text: '*_Pɪɴɢɪɴɢ..._*' 
-        });
-        
+
+        // Add a little delay for natural "animation" feel
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         var final = new Date().getTime();
         const pingTime = final - initial;
-        
-        // Send final ping styled message
+
+        // Send final ping styled message as quoted reply
         await socket.sendMessage(sender, { 
-            text: `> *Sɪɢᴍᴀ Mᴅ Sᴘᴇᴇᴅ : ${pingTime} ms ${randomEmojix}*`, 
-            edit: ping.key 
-        });
+            text: `> *Sɪɢᴍᴀ Mᴅ Sᴘᴇᴇᴅ : ${pingTime} ms ${randomEmojix}*`
+        }, { quoted: msg });
 
     } catch (error) {
         console.error(`Error in 'ping' case: ${error.message}`);
-        await socket.sendMessage(sender, {
-            text: '*Error !! Ping check failed*'
-        });
+        await socket.sendMessage(sender, { 
+            text: '*Error !! Ping check failed*' 
+        }, { quoted: msg });
     }
     break;
         case 'deleteme':
