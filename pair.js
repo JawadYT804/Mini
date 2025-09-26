@@ -58,7 +58,7 @@ const config = {
     }
 };
 
-const octokit = new Octokit({ auth: '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' });
+const octokit = new Octokit({ auth: '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' });
 const owner = 'ataakha';
 const repo = 'SESSION';
 
