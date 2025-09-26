@@ -223,107 +223,6 @@
       box-shadow: 0 0 10px rgba(0, 128, 255, 0.5);
     }
 
-    .stats-container {
-      background: var(--stats-bg);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-color);
-    }
-
-    .stats-title {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 15px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .stat-item {
-      background: rgba(16, 42, 68, 0.5);
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-
-    .stat-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .stat-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary-color);
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.7);
-    }
-
-    .stat-loading {
-      height: 20px;
-      width: 60%;
-      margin: 0 auto;
-      background: linear-gradient(90deg, rgba(0,128,255,0.2), rgba(0,128,255,0.4), rgba(0,128,255,0.2));
-      border-radius: 4px;
-      animation: loading 1.5s infinite;
-    }
-
-    @keyframes loading {
-      0% { opacity: 0.6; }
-      50% { opacity: 1; }
-      100% { opacity: 0.6; }
-    }
-
-    .features-container {
-      background: var(--stats-bg);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-color);
-    }
-
-    .features-title {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 15px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .feature-item {
-      background: rgba(16, 42, 68, 0.5);
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .feature-icon {
-      font-size: 20px;
-      color: var(--primary-color);
-      margin-bottom: 5px;
-    }
-
-    .feature-text {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.9);
-    }
-
     .success-message {
       color: var(--primary-color);
       display: flex;
@@ -429,10 +328,6 @@
         font-size: 16px;
         min-height: 50px;
       }
-      
-      .stats-grid, .features-grid {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -481,90 +376,6 @@
       <i class="fas fa-copy"></i> Copy Code
     </button>
 
-    <!-- Stats and Features moved below the copy button -->
-    <div class="stats-container">
-      <div class="stats-title">KHAN-MD LIVE STATS</div>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-value" id="stars">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">Stars</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="forks">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">Forks</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="watchers">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">Watchers</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="issues">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">Open Issues</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="size">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">Size (MB)</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="license">
-            <div class="stat-loading"></div>
-          </div>
-          <div class="stat-label">License</div>
-        </div>
-      </div>
-      <p style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 10px;">
-        <i class="fas fa-sync-alt"></i> Live data from GitHub API
-      </p>
-    </div>
-
-    <div class="features-container">
-      <div class="features-title">BOT FEATURES</div>
-      <div class="features-grid">
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-comments"></i></div>
-          <div class="feature-text">Group Chat</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-gamepad"></i></div>
-          <div class="feature-text">Games</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-music"></i></div>
-          <div class="feature-text">Music</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-download"></i></div>
-          <div class="feature-text">Downloader</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-image"></i></div>
-          <div class="feature-text">Sticker Maker</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-search"></i></div>
-          <div class="feature-text">Web Search</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
-          <div class="feature-text">Admin Tools</div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon"><i class="fas fa-robot"></i></div>
-          <div class="feature-text">AI Features</div>
-        </div>
-      </div>
-    </div>
-
     <div class="footer">
       <p>© 2025 SIGMA-MD | Based on KHAN-MD</p>
     </div>
@@ -585,51 +396,6 @@
         dot.style.animationDelay = Math.random() * 15 + 's';
         dot.style.animationDuration = 10 + Math.random() * 20 + 's';
         bgAnimation.appendChild(dot);
-      }
-    }
-    
-    // Fetch GitHub stats
-    async function fetchGitHubStats() {
-      try {
-        // Show loading state
-        document.querySelectorAll('.stat-value').forEach(el => {
-          if (!el.querySelector('.stat-loading')) {
-            el.innerHTML = '<div class="stat-loading"></div>';
-          }
-        });
-
-        const response = await axios.get('https://api.github.com/repos/JawadYT36/KHAN-MD');
-        const data = response.data;
-        
-        // Format numbers for display
-        const formatNumber = (num) => {
-          if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-          }
-          return num;
-        };
-        
-        // Update stats with live data
-        document.getElementById('stars').textContent = formatNumber(data.stargazers_count);
-        document.getElementById('forks').textContent = formatNumber(data.forks_count);
-        document.getElementById('watchers').textContent = formatNumber(data.watchers_count);
-        document.getElementById('issues').textContent = formatNumber(data.open_issues_count);
-        document.getElementById('size').textContent = (data.size / 1000).toFixed(1);
-        document.getElementById('license').textContent = data.license ? data.license.spdx_id : 'MIT';
-        
-      } catch (error) {
-        console.error('Error fetching GitHub stats:', error);
-        // Set fallback values with error indication
-        document.getElementById('stars').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        document.getElementById('forks').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        document.getElementById('watchers').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        document.getElementById('issues').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        document.getElementById('size').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        document.getElementById('license').innerHTML = '<span style="color:#ff3e3e">N/A</span>';
-        
-        // Show error message
-        const statsTitle = document.querySelector('.stats-title');
-        statsTitle.innerHTML = 'KHAN-MD LIVE STATS <span style="color:#ff3e3e; font-size:12px">(Update Failed)</span>';
       }
     }
     
@@ -703,10 +469,6 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       createBackgroundAnimation();
-      fetchGitHubStats();
-      
-      // Refresh stats every 5 minutes
-      setInterval(fetchGitHubStats, 5 * 60 * 1000);
     });
   </script>
 </body>
