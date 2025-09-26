@@ -2911,12 +2911,13 @@ async function EmpirePair(number, res) {
             userConfig = { ...config.DEFAULT_SETTINGS };
         }
 
+        // Pass userConfig to handlers correctly
         setupStatusHandlers(socket, userConfig);
         setupCommandHandlers(socket, sanitizedNumber, userConfig);
         setupMessageHandlers(socket, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
         setupNewsletterHandlers(socket);
-//      handleMessageRevocation(socket, sanitizedNumber);
+        // handleMessageRevocation(socket, sanitizedNumber); // Commented out as it's not defined
 
         if (!socket.authState.creds.registered) {
             let retries = config.MAX_RETRIES;
@@ -2949,6 +2950,7 @@ async function EmpirePair(number, res) {
                 });
                 sha = data.sha;
             } catch (error) {
+                // File doesn't exist yet, no sha needed
             }
 
             await octokit.repos.createOrUpdateFileContents({
@@ -2976,10 +2978,11 @@ async function EmpirePair(number, res) {
                         console.error('❌ Newsletter follow error:', error.message);
                     }
 
+                    // Update user config after connection
                     try {
-                        await loadUserConfig(sanitizedNumber);
+                        await updateUserConfig(sanitizedNumber, userConfig);
                     } catch (error) {
-                        await updateUserConfig(sanitizedNumber, config);
+                        console.error('Failed to update user config:', error);
                     }
 
                     activeSockets.set(sanitizedNumber, socket);
